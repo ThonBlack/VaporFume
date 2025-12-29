@@ -15,7 +15,7 @@ export async function login(prevState, formData) {
         const cookieStore = await cookies();
         cookieStore.set('admin_session', 'authenticated', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: false, // process.env.NODE_ENV === 'production', // FIXME: Re-enable when SSL is set up
             maxAge: 60 * 60 * 24 * 7, // 1 week
             path: '/',
         });

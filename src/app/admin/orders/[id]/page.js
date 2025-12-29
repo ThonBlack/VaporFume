@@ -134,6 +134,15 @@ export default async function OrderDetailsPage({ params }) {
                         Imprimir Comprovante
                     </Link>
 
+                    <Link
+                        href={`/admin/orders/${order.id}/label`}
+                        target="_blank"
+                        className="flex items-center justify-center gap-2 w-full bg-black hover:bg-gray-800 text-white font-medium py-3 rounded-lg transition-colors shadow-sm border border-gray-800"
+                    >
+                        <Printer className="w-4 h-4" />
+                        Imprimir Etiqueta (QR)
+                    </Link>
+
                     <button className="flex items-center justify-center gap-2 w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-lg transition-colors border border-red-100">
                         <XCircle className="w-4 h-4" />
                         Cancelar pedido
