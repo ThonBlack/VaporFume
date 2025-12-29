@@ -1,7 +1,8 @@
 import ProductForm from '@/components/ProductForm';
-import { createProduct, getProducts } from '@/lib/actions';
+import { createProduct, getProducts, getCategories } from '@/lib/actions';
 
 export default async function NewProductPage() {
     const availableProducts = await getProducts();
-    return <ProductForm action={createProduct} availableProducts={availableProducts} />;
+    const categories = await getCategories();
+    return <ProductForm action={createProduct} availableProducts={availableProducts} categories={categories} />;
 }
