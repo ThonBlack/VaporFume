@@ -1,21 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useFormState } from 'react-dom';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock } from 'lucide-react';
+import { login } from '@/app/actions/auth';
+import toast from 'react-hot-toast';
+
+const initialState = {
+    success: false,
+    error: null
+};
 
 export default function AdminLogin() {
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
+    const [state, formAction] = useFormState(login, initialState);
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        setLoading(true);
-        // Mock login delay
-        setTimeout(() => {
+    useEffect(() => {
+        if (state.success) {
+            toast.success('Login realizado com sucesso!');
             router.push('/admin');
-        }, 1000);
-    };
+        } else if (state.error) {
+            toast.error(state.error);
+        }
+    }, [state, router]);
 
     return (
         <div style={{
@@ -52,10 +60,12 @@ export default function AdminLogin() {
                 <h1 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Painel Administrativo</h1>
                 <p style={{ color: '#666', marginBottom: '32px' }}>Entre com suas credenciais de acesso</p>
 
-                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <input
+                        name="email"
                         type="email"
                         placeholder="admin@vaporfume.com"
+                        required
                         style={{
                             padding: '16px',
                             background: '#222',
@@ -66,8 +76,10 @@ export default function AdminLogin() {
                         }}
                     />
                     <input
+                        name="password"
                         type="password"
                         placeholder="••••••••"
+                        required
                         style={{
                             padding: '16px',
                             background: '#222',
@@ -77,20 +89,31 @@ export default function AdminLogin() {
                             outline: 'none'
                         }}
                     />
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="btn btn-primary"
-                        style={{
-                            width: '100%',
-                            marginTop: '8px',
-                            opacity: loading ? 0.7 : 1
-                        }}
-                    >
-                        {loading ? 'Entrando...' : 'Acessar Painel'}
-                    </button>
+                    <SubmitButton />
                 </form>
             </div>
         </div>
+    );
+}
+
+import { useFormStatus } from 'react-dom';
+
+function SubmitButton() {
+    const { pending } = useFormStatus();
+
+    return (
+        <button
+            type="submit"
+            disabled={pending}
+            className="btn btn-primary"
+            style={{
+                width: '100%',
+                marginTop: '8px',
+                opacity: pending ? 0.7 : 1,
+                cursor: pending ? 'not-allowed' : 'pointer'
+            }}
+        >
+            {pending ? 'Entrando...' : 'Acessar Painel'}
+        </button>
     );
 }
