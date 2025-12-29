@@ -61,6 +61,7 @@ export default function RootLayout({ children }) {
         <Toaster position="top-center" />
         <AgeGate />
         <InstallPrompt />
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

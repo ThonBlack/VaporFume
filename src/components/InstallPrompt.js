@@ -10,7 +10,7 @@ export default function InstallPrompt() {
     useEffect(() => {
         // DEMO MODE: Force show for visual testing (User request)
         // In production, rely on 'beforeinstallprompt'
-        setTimeout(() => setIsVisible(true), 2000);
+        // setTimeout(() => setIsVisible(true), 2000);
 
         const handler = (e) => {
             // Prevent the mini-infobar from appearing on mobile
@@ -30,7 +30,10 @@ export default function InstallPrompt() {
     }, []);
 
     const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
+        if (!deferredPrompt) {
+            alert("A instalação não está disponível no momento. Pode ser que o app já esteja instalado ou o navegador não suporte.");
+            return;
+        }
 
         // Show the install prompt
         deferredPrompt.prompt();
