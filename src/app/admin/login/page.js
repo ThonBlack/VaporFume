@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock } from 'lucide-react';
@@ -14,7 +14,7 @@ const initialState = {
 
 export default function AdminLogin() {
     const router = useRouter();
-    const [state, formAction] = useFormState(login, initialState);
+    const [state, formAction] = useActionState(login, initialState);
 
     useEffect(() => {
         if (state.success) {

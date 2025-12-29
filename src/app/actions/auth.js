@@ -12,7 +12,8 @@ export async function login(prevState, formData) {
 
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
         // Set cookie manually
-        cookies().set('admin_session', 'authenticated', {
+        const cookieStore = await cookies();
+        cookieStore.set('admin_session', 'authenticated', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: 60 * 60 * 24 * 7, // 1 week
@@ -25,6 +26,7 @@ export async function login(prevState, formData) {
 }
 
 export async function logout() {
-    cookies().delete('admin_session');
+    const cookieStore = await cookies();
+    cookieStore.delete('admin_session');
     redirect('/admin/login');
 }
