@@ -1,0 +1,21 @@
+{
+    "name": "Vapor Fumê",
+    "short_name": "Vapor Fumê",
+    "description": "Sua loja de vapes e pods.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "icons": [
+        {
+            "src": "/assets/logo-custom.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/logo-custom.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

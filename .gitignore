@@ -1,0 +1,34 @@
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment
+.env
+.env.local
+.env.production
+.env.development
+
+# Database
+sqlite.db
+sqlite.db-journal
+*.db
+*.sqlite
+drizzle/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug_actions.txt
+check_categories.js
