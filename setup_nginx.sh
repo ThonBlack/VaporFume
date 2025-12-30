@@ -1,5 +1,5 @@
 #!/bin/bash
-# Configure Nginx with new path
+# Configure Nginx with allow-list path
 cat > /etc/nginx/sites-available/default <<EOF
 server {
     listen 80;
@@ -7,9 +7,9 @@ server {
 
     client_max_body_size 50M;
 
-    # Serve uploads from the public accessible folder
+    # Serve uploads from the app public folder (permissions enabled via chown/chmod)
     location /uploads/ {
-        alias /var/www/vaporfume-uploads/;
+        alias /root/VaporFume/public/uploads/;
         access_log off;
         expires max;
     }
@@ -28,4 +28,4 @@ EOF
 
 # Restart Nginx
 systemctl restart nginx
-echo "Nginx Re-Configured with /var/www path!"
+echo "Nginx Re-Configured with internal path!"
