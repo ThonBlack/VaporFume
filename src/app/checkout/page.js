@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 // import { useCart } from '@/lib/store'; // Assuming we have a cart store later, for now we will mock
 import { processCheckout } from '@/app/actions/checkout';
-import { Loader2, CreditCard, MessageCircle, ArrowRight, CheckCircle2, Copy, ArrowLeft } from 'lucide-react';
+import { calculateShipping } from '@/app/actions/shipping';
+import { Loader2, CreditCard, MessageCircle, ArrowRight, CheckCircle2, Copy, ArrowLeft, Truck } from 'lucide-react';
 import Image from 'next/image';
 
 export default function CheckoutPage() {
@@ -14,6 +15,7 @@ export default function CheckoutPage() {
     const [step, setStep] = useState(1); // 1: Ident, 2: Payment, 3: Success
     const [formData, setFormData] = useState({
         name: '',
+        cpf: '', // New CPF field
         email: '',
         phone: '',
         postalCode: '',
@@ -21,6 +23,12 @@ export default function CheckoutPage() {
         city: '',
         state: ''
     });
+    // Shipping State
+    const [shippingCost, setShippingCost] = useState(0);
+    const [shippingService, setShippingService] = useState(null); // 'Correios PAC', 'Motoboy', etc.
+    const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+    const [shippingError, setShippingError] = useState(null);
+
     const [paymentMethod, setPaymentMethod] = useState('whatsapp');
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState(null);
@@ -35,22 +43,100 @@ export default function CheckoutPage() {
 
     const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    // Dynamic Shipping Logic
-    const isUberaba = formData.city?.toLowerCase().trim() === 'uberaba' ||
-        (formData.postalCode?.startsWith('380') || formData.postalCode?.startsWith('381'));
+    // Format CPF
+    const handleCpfChange = (e) => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length > 11) val = val.slice(0, 11);
 
-    const shippingCost = isUberaba ? 0.00 : 25.90; // Free for Uberaba, Fixed otherwise
+        // Mask: 000.000.000-00
+        if (val.length > 9) val = val.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        else if (val.length > 6) val = val.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3');
+        else if (val.length > 3) val = val.replace(/(\d{3})(\d{3})/, '$1.$2');
+
+        setFormData(prev => ({ ...prev, cpf: val }));
+    };
+
+    // CEP Logic
+    const handleCepChange = async (e) => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length > 8) val = val.slice(0, 8);
+
+        // Mask: 00000-000
+        const formatted = val.length > 5 ? val.replace(/(\d{5})(\d{1,3})/, '$1-$2') : val;
+
+        setFormData(prev => ({ ...prev, postalCode: formatted }));
+
+        if (val.length === 8) {
+            setIsCalculatingShipping(true);
+            setShippingError(null);
+
+            // 1. Fetch Address (ViaCEP)
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${val}/json/`);
+                const data = await res.json();
+
+                if (data.erro) {
+                    setFormData(prev => ({ ...prev, address: '', city: '', state: '' })); // Clear
+                    setShippingError('CEP não encontrado.');
+                    setIsCalculatingShipping(false);
+                    return;
+                }
+
+                // Update Address
+                setFormData(prev => ({
+                    ...prev,
+                    address: `${data.logradouro}, ${data.bairro}`,
+                    city: data.localidade,
+                    state: data.uf
+                }));
+
+                // 2. Calculate Shipping
+                // Check if Uberaba
+                const citySlug = data.localidade.toLowerCase().trim();
+                const isUberaba = citySlug === 'uberaba' || (val.startsWith('380') || val.startsWith('381'));
+
+                if (isUberaba) {
+                    setShippingCost(0.00);
+                    setShippingService('Entrega Grátis (Uberaba)');
+                    setIsCalculatingShipping(false);
+                } else {
+                    // Call Server Action for Melhor Envio
+                    const shippingRes = await calculateShipping(val);
+
+                    if (shippingRes.error) {
+                        setShippingError(shippingRes.error);
+                        // Fallback fixed price if error
+                        setShippingCost(25.90);
+                        setShippingService('Frete Fixo (Erro no Cálculo)');
+                    } else if (shippingRes.warning) {
+                        setShippingCost(25.90);
+                        setShippingService('Frete Fixo');
+                    } else {
+                        setShippingCost(shippingRes.price);
+                        setShippingService(`Frete Correios (${shippingRes.service})`);
+                    }
+                    setIsCalculatingShipping(false);
+                }
+
+            } catch (err) {
+                console.error('CEP Error:', err);
+                setShippingError('Erro ao buscar CEP.');
+                setIsCalculatingShipping(false);
+            }
+        } else {
+            // Reset if CEP incomplete
+            if (shippingCost !== 0) {
+                setShippingCost(0);
+                setShippingService(null);
+            }
+        }
+    };
+
 
     const handleProcess = async () => {
         console.log('[Client Checkout] Button Clicked. Starting handleProcess...');
         setIsProcessing(true);
         try {
-            console.log('[Client Checkout] Invoking processCheckout server action with:', {
-                name: formData.name,
-                itemsCount: cart.length,
-                total: cartTotal + shippingCost
-            });
-
             if (typeof processCheckout !== 'function') {
                 throw new Error('Server Action processCheckout is not defined! Check server logs.');
             }
@@ -58,13 +144,16 @@ export default function CheckoutPage() {
             const res = await processCheckout({
                 customerName: formData.name,
                 customerEmail: formData.email,
+                customerCPF: formData.cpf, // Pass CPF
                 items: cart,
                 total: cartTotal + shippingCost,
                 paymentMethod: paymentMethod,
                 customerPhone: formData.phone,
-                customerAddress: formData.address,
+                customerAddress: formData.address, // Street + Neighborhood
                 customerCity: formData.city,
-                customerZip: formData.postalCode
+                customerState: formData.state,
+                customerZip: formData.postalCode,
+                shippingService: shippingService // Save service name
             });
 
             console.log('[Client Checkout] Server Action Result:', res);
@@ -144,19 +233,12 @@ export default function CheckoutPage() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-medium text-gray-900">{item.productName}</p>
-
-                                            {/* Variant Display */}
                                             {item.variants && Array.isArray(item.variants) ? (
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Sabores: {item.variants.join(', ')}
-                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">Sabores: {item.variants.join(', ')}</p>
                                             ) : item.variantName ? (
                                                 <p className="text-xs text-gray-500 mt-1">Sabor: {item.variantName}</p>
                                             ) : null}
-
-                                            <p className="text-xs font-semibold text-gray-900 mt-1">
-                                                {item.quantity}x R$ {item.price.toFixed(2)}
-                                            </p>
+                                            <p className="text-xs font-semibold text-gray-900 mt-1">{item.quantity}x R$ {item.price.toFixed(2)}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -167,13 +249,18 @@ export default function CheckoutPage() {
                                     <span>R$ {cartTotal.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm text-gray-500">
-                                    <span>Frete (Estimado)</span>
-                                    <span>R$ {shippingCost.toFixed(2)}</span>
+                                    <span>Frete</span>
+                                    <span>{shippingCost === 0 && shippingService ? 'Grátis' : `R$ ${shippingCost.toFixed(2)}`}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-lg font-bold text-gray-900 pt-2">
                                     <span>Total</span>
                                     <span>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
                                 </div>
+                                {shippingService && (
+                                    <div className="text-xs text-gray-500 text-right mt-1 flex items-center justify-end gap-1">
+                                        <Truck className="w-3 h-3" /> {shippingService}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -188,7 +275,7 @@ export default function CheckoutPage() {
                                 </h2>
 
                                 <div className="grid grid-cols-1 gap-4">
-                                    {/* Personal Data (Restored) */}
+                                    {/* Personal Data */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
                                         <input
@@ -199,111 +286,114 @@ export default function CheckoutPage() {
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         />
                                     </div>
+
+                                    {/* CPF Field - Required for Pix */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">CPF (Necessário para Pix)</label>
                                         <input
                                             type="text"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                            placeholder="(11) 99999-9999"
-                                            value={formData.phone}
-                                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                        <input
-                                            type="email"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                            placeholder="seu@email.com"
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all font-mono"
+                                            placeholder="000.000.000-00"
+                                            value={formData.cpf}
+                                            onChange={handleCpfChange}
                                         />
                                     </div>
 
-                                    {/* Address Data */}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
                                             <input
                                                 type="text"
                                                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                                placeholder="00000-000"
-                                                value={formData.postalCode || ''}
-                                                onChange={e => {
-                                                    const val = e.target.value.replace(/\D/g, '');
-                                                    // ViaCEP Logic
-                                                    if (val.length === 8) {
-                                                        fetch(`https://viacep.com.br/ws/${val}/json/`)
-                                                            .then(res => res.json())
-                                                            .then(data => {
-                                                                if (!data.erro) {
-                                                                    setFormData(prev => ({
-                                                                        ...prev,
-                                                                        postalCode: val, // Keep clean
-                                                                        address: `${data.logradouro}, ${data.bairro}`,
-                                                                        city: data.localidade,
-                                                                        state: data.uf
-                                                                    }));
-                                                                }
-                                                            })
-                                                            .catch(err => console.error('ViaCEP Error:', err));
-                                                    }
-                                                    setFormData(prev => ({ ...prev, postalCode: val }));
-                                                }}
-                                                maxLength={8}
+                                                placeholder="(11) 99999-9999"
+                                                value={formData.phone}
+                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                             <input
-                                                type="text"
-                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all bg-gray-50"
-                                                placeholder="Ex: Uberaba"
-                                                value={formData.city || ''}
-                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                                type="email"
+                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                placeholder="seu@email.com"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Google Review Prompt for Free Shipping */}
-                                    {formData.city?.toLowerCase().trim() === 'uberaba' && (
-                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-                                            <div className="bg-blue-100 p-2 rounded-full text-blue-600">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                                    {/* Address Data */}
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                        placeholder="00000-000"
+                                                        value={formData.postalCode || ''}
+                                                        onChange={handleCepChange}
+                                                        maxLength={9}
+                                                    />
+                                                    {isCalculatingShipping && (
+                                                        <div className="absolute right-3 top-3">
+                                                            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {shippingError && <p className="text-red-500 text-xs mt-1">{shippingError}</p>}
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-blue-900 text-sm">Frete Grátis Disponível!</h4>
-                                                <p className="text-xs text-blue-700 mt-1">
-                                                    Para clientes de <strong>Uberaba</strong>, o frete é por nossa conta.
-                                                    Pedimos apenas que nos avalie no Google:
-                                                </p>
-                                                <a
-                                                    href="https://g.page/r/CU3gzTJxtncsEAE/review"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-block mt-2 text-xs font-bold text-blue-600 hover:underline"
-                                                >
-                                                    ⭐⭐⭐⭐⭐ Avaliar Vapor Fumê
-                                                </a>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                                <input
+                                                    type="text"
+                                                    disabled // Lock City
+                                                    className="w-full p-3 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                                                    placeholder="Cidade"
+                                                    value={formData.city || ''}
+                                                />
                                             </div>
                                         </div>
-                                    )}
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Endereço Completo</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                            placeholder="Rua, Número, Bairro"
-                                            value={formData.address}
-                                            onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                        />
+                                        {/* Google Review Prompt */}
+                                        {shippingService === 'Entrega Grátis (Uberaba)' && (
+                                            <div className="bg-blue-100 p-3 rounded-lg border border-blue-200 flex items-center gap-3">
+                                                <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                                                <div className="text-sm text-blue-800">
+                                                    <strong>Frete Grátis Liberado!</strong> (Uberaba)<br />
+                                                    <span className="text-xs">Avalie a gente no Google e ajude a loja! ⭐</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Endereço (Rua, Bairro, Nº)</label>
+                                            <input
+                                                type="text"
+                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                placeholder="Preenchido Automaticamente pelo CEP"
+                                                value={formData.address}
+                                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
                                 <button
                                     onClick={() => setStep(2)}
-                                    disabled={!formData.name || !formData.phone || !formData.email || !formData.address || !formData.city}
+                                    disabled={
+                                        // Validation: All fields + valid CEP/Shipping
+                                        !formData.name ||
+                                        !formData.cpf ||
+                                        formData.cpf.length < 14 || // Simple length check for mask
+                                        !formData.phone ||
+                                        !formData.email ||
+                                        !formData.address ||
+                                        !formData.city ||
+                                        isCalculatingShipping ||
+                                        (shippingCost === 0 && !shippingService) // Ensure shipping was calculated (unless error fallback set cost)
+                                    }
                                     className="w-full bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Ir para Pagamento <ArrowRight className="w-4 h-4" />

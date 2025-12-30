@@ -34,7 +34,11 @@ export async function processCheckout(data) {
                     description: `Pedido #${orderId} - Vapor Fumê`,
                     payer: {
                         first_name: data.customerName.split(' ')[0],
-                        last_name: data.customerName.split(' ').slice(1).join(' ') || 'Cliente'
+                        last_name: data.customerName.split(' ').slice(1).join(' ') || 'Cliente',
+                        identification: {
+                            type: 'CPF',
+                            number: data.customerCPF ? data.customerCPF.replace(/\D/g, '') : '19119119100'
+                        }
                     }
                 });
                 return { orderId, pixData: pix };

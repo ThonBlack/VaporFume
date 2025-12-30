@@ -27,9 +27,9 @@ export async function createPixPayment(paymentInput) {
                 email: paymentInput.email,
                 first_name: paymentInput.payer?.first_name || 'Cliente',
                 last_name: paymentInput.payer?.last_name || 'Vapor',
-                identification: {
+                identification: paymentInput.payer.identification || {
                     type: 'CPF',
-                    number: '19119119100' // Placeholder if not collected
+                    number: '19119119100'
                 }
             }
         };
