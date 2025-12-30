@@ -80,7 +80,13 @@ export async function createProduct(formData) {
     // Multi-Image Handling
     const fs = require('fs');
     const path = require('path');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+
+    // Configurable Upload Directory
+    // In production (VPS), use /var/www to avoid permission issues with /root
+    const isProduction = process.env.NODE_ENV === 'production';
+    const uploadDir = isProduction
+        ? '/var/www/vaporfume-uploads'
+        : path.join(process.cwd(), 'public', 'uploads');
 
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
@@ -198,7 +204,11 @@ export async function updateProduct(formData) {
 
     const fs = require('fs');
     const path = require('path');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    const uploadDir = isProduction
+        ? '/var/www/vaporfume-uploads'
+        : path.join(process.cwd(), 'public', 'uploads');
 
     if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir, { recursive: true }); }
 

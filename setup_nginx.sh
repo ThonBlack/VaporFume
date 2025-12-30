@@ -1,5 +1,5 @@
 #!/bin/bash
-# Configure Nginx with allow-list path
+# Configure Nginx to serve from /var/www/vaporfume-uploads
 cat > /etc/nginx/sites-available/default <<EOF
 server {
     listen 80;
@@ -7,9 +7,9 @@ server {
 
     client_max_body_size 50M;
 
-    # Serve uploads from the app public folder (permissions enabled via chown/chmod)
+    # Serve uploads from the public accessible folder (Permissions: www-data:www-data 777)
     location /uploads/ {
-        alias /root/VaporFume/public/uploads/;
+        alias /var/www/vaporfume-uploads/;
         access_log off;
         expires max;
     }
@@ -26,6 +26,11 @@ server {
 }
 EOF
 
+# Ensure directory exists and has permissions
+mkdir -p /var/www/vaporfume-uploads
+chown -R www-data:www-data /var/www/vaporfume-uploads
+chmod -R 777 /var/www/vaporfume-uploads
+
 # Restart Nginx
 systemctl restart nginx
-echo "Nginx Re-Configured with internal path!"
+echo "Nginx Re-Configured with /var/www/vaporfume-uploads!"

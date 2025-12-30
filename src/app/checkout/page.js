@@ -34,8 +34,15 @@ export default function CheckoutPage() {
     const shippingCost = 25.90; // Fixed shipping for MVP. Future: Melhor Envio integration.
 
     const handleProcess = async () => {
+        console.log('[Client Checkout] Button Clicked. Starting handleProcess...');
         setIsProcessing(true);
         try {
+            console.log('[Client Checkout] Invoking processCheckout server action with:', {
+                name: formData.name,
+                itemsCount: cart.length,
+                total: cartTotal + shippingCost
+            });
+
             const res = await processCheckout({
                 customerName: formData.name,
                 customerEmail: formData.email,
@@ -45,7 +52,10 @@ export default function CheckoutPage() {
                 customerPhone: formData.phone // Pass phone to action
             });
 
+            console.log('[Client Checkout] Server Action Result:', res);
+
             if (res.error) {
+                console.error('[Client Checkout] Error returned:', res.error);
                 alert(res.error);
             } else {
                 setResult(res);
@@ -63,10 +73,11 @@ export default function CheckoutPage() {
                 }
             }
         } catch (err) {
-            console.error(err);
+            console.error('[Client Checkout] Exception caught:', err);
             alert('Erro ao processar pedido.');
         } finally {
             setIsProcessing(false);
+            console.log('[Client Checkout] Process finished.');
         }
     };
 
