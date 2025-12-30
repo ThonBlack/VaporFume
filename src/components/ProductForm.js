@@ -90,11 +90,38 @@ export default function ProductForm({ action, initialData = null, availableProdu
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                             <div>
-                                step="0.01"
-                                placeholder="0.00"
-                                className="admin-input"
-                                defaultValue={initialData?.costPrice}
-                                    />
+                                <label className="label">Preço de Venda (Atual)</label>
+                                <input
+                                    name="price"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    className="admin-input"
+                                    defaultValue={initialData?.price}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Preço Original (Antigo/Riscado)</label>
+                                <input
+                                    name="oldPrice"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    className="admin-input"
+                                    defaultValue={initialData?.oldPrice}
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Preço de Custo</label>
+                                <input
+                                    name="costPrice"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    className="admin-input"
+                                    defaultValue={initialData?.costPrice}
+                                />
                             </div>
                         </div>
 
