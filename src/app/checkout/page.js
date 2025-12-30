@@ -31,7 +31,12 @@ export default function CheckoutPage() {
     }, []);
 
     const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const shippingCost = 25.90; // Fixed shipping for MVP. Future: Melhor Envio integration.
+
+    // Dynamic Shipping Logic
+    const isUberaba = formData.city?.toLowerCase().trim() === 'uberaba' ||
+        (formData.postalCode?.startsWith('380') || formData.postalCode?.startsWith('381'));
+
+    const shippingCost = isUberaba ? 0.00 : 25.90; // Free for Uberaba, Fixed otherwise
 
     const handleProcess = async () => {
         console.log('[Client Checkout] Button Clicked. Starting handleProcess...');
@@ -177,34 +182,65 @@ export default function CheckoutPage() {
                                 </h2>
 
                                 <div className="grid grid-cols-1 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                            <input
+                                                type="text"
+                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                placeholder="00000-000"
+                                                value={formData.postalCode || ''}
+                                                onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                                                onBlur={(e) => {
+                                                    // Simple heuristic: if CEP starts with '380' or '381', valid for Uberaba region check or just ask City
+                                                    // For MVP, if they type 380xx or 381xx we auto-assume potential Uberaba, but better let them type City
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                            <input
+                                                type="text"
+                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                placeholder="Ex: Uberaba"
+                                                value={formData.city || ''}
+                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Google Review Prompt for Free Shipping */}
+                                    {formData.city?.toLowerCase().trim() === 'uberaba' && (
+                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                                            <div className="bg-blue-100 p-2 rounded-full text-blue-600">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-blue-900 text-sm">Frete Grátis Disponível!</h4>
+                                                <p className="text-xs text-blue-700 mt-1">
+                                                    Para clientes de <strong>Uberaba</strong>, o frete é por nossa conta.
+                                                    Pedimos apenas que nos avalie no Google:
+                                                </p>
+                                                <a
+                                                    href="https://g.page/r/CU3gzTJxtncsEAE/review"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-block mt-2 text-xs font-bold text-blue-600 hover:underline"
+                                                >
+                                                    ⭐⭐⭐⭐⭐ Avaliar Vapor Fumê
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Endereço Completo</label>
                                         <input
                                             type="text"
                                             className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                            placeholder="Seu nome"
-                                            value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                            placeholder="(11) 99999-9999"
-                                            value={formData.phone}
-                                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                        <input
-                                            type="email"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                            placeholder="seu@email.com"
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            placeholder="Rua, Número, Bairro"
+                                            value={formData.address}
+                                            onChange={e => setFormData({ ...formData, address: e.target.value })}
                                         />
                                     </div>
                                 </div>
