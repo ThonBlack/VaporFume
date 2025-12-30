@@ -4,9 +4,12 @@ import { getSettings } from '@/app/actions/settings';
 /**
  * Creates a Pix payment using user credentials from DB
  */
-export async function createPixPayment(orderData) {
+export async function createPixPayment(paymentInput) {
     const settings = await getSettings();
     const accessToken = settings.mercadopago_access_token;
+
+    // Debug log to confirm token load (masked)
+    console.log('[MercadoPago] Loaded Token:', accessToken ? `${accessToken.slice(0, 10)}...` : 'NULL');
 
     if (!accessToken) {
         throw new Error('Access Token do Mercado Pago não configurado.');
@@ -17,19 +20,21 @@ export async function createPixPayment(orderData) {
 
     try {
         const paymentData = {
-            transaction_amount: orderData.total,
-            description: `Pedido #${orderData.id} - Vapor Fumê`,
+            transaction_amount: Number(paymentInput.amount),
+            description: paymentInput.description,
             payment_method_id: 'pix',
             payer: {
-                email: orderData.customerEmail,
-                first_name: orderData.customerName.split(' ')[0],
-                last_name: orderData.customerName.split(' ').slice(1).join(' ') || 'Cliente',
+                email: paymentInput.email,
+                first_name: paymentInput.payer?.first_name || 'Cliente',
+                last_name: paymentInput.payer?.last_name || 'Vapor',
                 identification: {
                     type: 'CPF',
                     number: '19119119100' // Placeholder if not collected
                 }
             }
         };
+
+        console.log('[MercadoPago] Payload:', JSON.stringify(paymentData, null, 2));
 
         const result = await payment.create({ body: paymentData });
         return {
@@ -41,6 +46,6 @@ export async function createPixPayment(orderData) {
         };
     } catch (error) {
         console.error('Mercado Pago Error:', error);
-        throw new Error('Falha ao criar pagamento Pix.');
+        throw new Error('Falha ao criar pagamento Pix: ' + (error.cause || error.message));
     }
 }
