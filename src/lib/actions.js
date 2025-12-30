@@ -261,7 +261,21 @@ export async function updateProduct(formData) {
     // If original images were ['a', 'b', 'c'] and we updated index 1 to 'd', we have ['a', 'd', 'c'].
     // If original was ['a'] and we updated index 2 to 'b', we have ['a', empty, 'b'].
     // We should filter Boolean to remove empty slots.
-    const finalImages = newImages.filter(img => img && typeof img === 'string' && img.length > 0);
+    // FIX: Do NOT filter boolean if we want to preserve 5 slots? 
+    // Actually our UI maps [0,1,2,3,4]. If we return ['a', 'b'], index 2 is undefined.
+    // But if we have ['a', empty, 'b'] -> JSON stringify -> ["a",null,"b"].
+    // The frontend doing `JSON.parse(images)[index]` will get null for index 1, and "b" for index 2.
+    // If we FILTER, we get ["a", "b"]. Start UI: Index 0=a, Index 1=b. Index 2=null.
+    // So the image "b" moves from slot 2 to slot 1 visually.
+    // The user uploaded to slot 4 (index 4). If slots 0-3 are empty, we have [null, null, null, null, "img"].
+    // Filter removes nulls -> ["img"].
+    // UI displays "img" at index 0 (Cover).
+    // The user sees it at index 0.
+    // Wait, the user screenshot shows image at index 4 (last one) broken.
+    // If it was filtered, it would be at index 0 (if others empty) or appended.
+    // If the user *wants* specific slots, we should NOT filter.
+    // Let's remove the filter to respect the slots.
+    const finalImages = newImages; // .filter(Boolean); REMOVED FILTER to preserve slots
 
     const mainImage = finalImages.length > 0 ? finalImages[0] : '/assets/ref-mobile.jpg';
 

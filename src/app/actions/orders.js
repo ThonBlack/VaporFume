@@ -77,7 +77,7 @@ export async function createOrder(data) {
             orderId,
             productId: item.productId,
             productName: item.productName,
-            variantName: item.variantName,
+            variantName: item.variantName || (item.variants && item.variants.join(', ')),
             quantity: item.quantity,
             price: item.price
         }));

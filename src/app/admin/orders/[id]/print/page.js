@@ -1,4 +1,5 @@
 import { getOrderById } from '@/app/actions/orders';
+import QRCode from 'react-qr-code';
 import { notFound } from 'next/navigation';
 
 export default async function PrintOrderPage({ params }) {
@@ -11,56 +12,70 @@ export default async function PrintOrderPage({ params }) {
 
     if (!order) return <div>Pedido não encontrado</div>;
 
-    // A simple, thermal-printer friendly layout
-    // 80mm width approx 300px-ish, usually standard is just full width of viewport but let's constrain it for preview
+    // QR Data
+    const qrData = `Pedido #${order.id}\nCli: ${order.customerName}\nTotal: R$ ${order.total.toFixed(2)}\n${order.items.map(i => `${i.quantity}x ${i.productName}`).join('\n')}`;
+
     return (
-        <div className="font-mono text-sm leading-tight p-4 max-w-[300px] mx-auto print:max-w-none print:w-full">
+        <div style={{
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#fff'
+        }}>
             <style>{`
                 @media print {
-                    @page { margin: 0; size: auto; }
-                    body { margin: 0.5cm; }
+                    @page { size: auto; margin: 0mm; }
+                    body { margin: 0px; }
                 }
             `}</style>
 
-            <div className="text-center mb-4">
-                <h1 className="font-bold text-lg uppercase">Vapor Fumê</h1>
-                <p>Top Vapes & Pods</p>
-                <p>================================</p>
-            </div>
-
-            <div className="mb-4">
-                <p>Pedido: #{order.id}</p>
-                <p>Data: {new Date(order.createdAt).toLocaleString('pt-BR')}</p>
-                <p>Cliente: {order.customerName}</p>
-                {order.customerPhone && <p>Tel: {order.customerPhone}</p>}
-            </div>
-
-            <p className="mb-2 border-b border-black pb-1">PRODUTOS</p>
-
-            <div className="space-y-2 mb-4">
-                {order.items.map((item, idx) => (
-                    <div key={idx}>
-                        <div className="flex justify-between">
-                            <span>{item.quantity}x {item.productName}</span>
-                            <span>{(item.quantity * item.price).toFixed(2)}</span>
-                        </div>
-                        {item.variantName && (
-                            <div className="text-[10px] pl-2">- {item.variantName}</div>
-                        )}
+            <div style={{
+                width: '320px',
+                height: '480px',
+                border: '6px solid #444',
+                borderRadius: '12px',
+                padding: '32px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                textAlign: 'center',
+                fontFamily: 'sans-serif',
+                boxSizing: 'border-box'
+            }}>
+                {/* Header / Logo */}
+                <div style={{ width: '100%' }}>
+                    <div className="w-full flex justify-center mb-6">
+                        <img src="/assets/logo-custom.png" alt="Vapor Fume" style={{ maxHeight: '50px', objectFit: 'contain' }} />
                     </div>
-                ))}
+                </div>
+
+                {/* Customer Info */}
+                <div>
+                    <h2 style={{ fontSize: '1.2rem', margin: '0 0 8px 0', fontWeight: 'bold', color: '#000' }}>Encomenda de:</h2>
+                    <p style={{ fontSize: '1.8rem', margin: '0', fontWeight: '900', color: '#000', textTransform: 'uppercase' }}>
+                        {order.customerName.split(' ')[0]}
+                    </p>
+                </div>
+
+                {/* QR Code */}
+                <div style={{ padding: '0', margin: '20px 0' }}>
+                    <QRCode
+                        value={qrData}
+                        size={140}
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        viewBox={`0 0 256 256`}
+                    />
+                </div>
+
+                {/* Footer */}
+                <div style={{ width: '100%' }}>
+                    <div style={{ width: '100%', height: '2px', background: '#000', margin: '0 auto 16px auto' }}></div>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#000' }}>Agradecemos pela preferência</p>
+                </div>
             </div>
-
-            <p className="border-t border-black pt-2 flex justify-between font-bold text-base">
-                <span>TOTAL</span>
-                <span>R$ {order.total.toFixed(2)}</span>
-            </p>
-
-            <div className="mt-8 text-center text-xs">
-                <p>Obrigado pela preferência!</p>
-                <p>Volte Sempre</p>
-            </div>
-
             <script dangerouslySetInnerHTML={{ __html: 'window.print();' }} />
         </div>
     );
