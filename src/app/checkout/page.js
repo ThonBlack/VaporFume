@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 // import { useCart } from '@/lib/store'; // Assuming we have a cart store later, for now we will mock
 import { processCheckout } from '@/app/actions/checkout';
-import { Loader2, CreditCard, MessageCircle, ArrowRight, CheckCircle2, Copy } from 'lucide-react';
+import { Loader2, CreditCard, MessageCircle, ArrowRight, CheckCircle2, Copy, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 
 export default function CheckoutPage() {
@@ -16,7 +16,10 @@ export default function CheckoutPage() {
         name: '',
         email: '',
         phone: '',
-        address: ''
+        postalCode: '',
+        address: '',
+        city: '',
+        state: ''
     });
     const [paymentMethod, setPaymentMethod] = useState('whatsapp');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -182,6 +185,39 @@ export default function CheckoutPage() {
                                 </h2>
 
                                 <div className="grid grid-cols-1 gap-4">
+                                    {/* Personal Data (Restored) */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                            placeholder="Seu nome"
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                            placeholder="(11) 99999-9999"
+                                            value={formData.phone}
+                                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                            placeholder="seu@email.com"
+                                            value={formData.email}
+                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                        />
+                                    </div>
+
+                                    {/* Address Data */}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
@@ -190,18 +226,35 @@ export default function CheckoutPage() {
                                                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
                                                 placeholder="00000-000"
                                                 value={formData.postalCode || ''}
-                                                onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
-                                                onBlur={(e) => {
-                                                    // Simple heuristic: if CEP starts with '380' or '381', valid for Uberaba region check or just ask City
-                                                    // For MVP, if they type 380xx or 381xx we auto-assume potential Uberaba, but better let them type City
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    // ViaCEP Logic
+                                                    if (val.length === 8) {
+                                                        fetch(`https://viacep.com.br/ws/${val}/json/`)
+                                                            .then(res => res.json())
+                                                            .then(data => {
+                                                                if (!data.erro) {
+                                                                    setFormData(prev => ({
+                                                                        ...prev,
+                                                                        postalCode: val, // Keep clean
+                                                                        address: `${data.logradouro}, ${data.bairro}`,
+                                                                        city: data.localidade,
+                                                                        state: data.uf
+                                                                    }));
+                                                                }
+                                                            })
+                                                            .catch(err => console.error('ViaCEP Error:', err));
+                                                    }
+                                                    setFormData(prev => ({ ...prev, postalCode: val }));
                                                 }}
+                                                maxLength={8}
                                             />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
                                             <input
                                                 type="text"
-                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all bg-gray-50"
                                                 placeholder="Ex: Uberaba"
                                                 value={formData.city || ''}
                                                 onChange={e => setFormData({ ...formData, city: e.target.value })}
@@ -247,7 +300,7 @@ export default function CheckoutPage() {
 
                                 <button
                                     onClick={() => setStep(2)}
-                                    disabled={!formData.name || !formData.phone || !formData.email}
+                                    disabled={!formData.name || !formData.phone || !formData.email || !formData.address || !formData.city}
                                     className="w-full bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Ir para Pagamento <ArrowRight className="w-4 h-4" />
@@ -355,10 +408,4 @@ export default function CheckoutPage() {
             </div>
         </div>
     );
-}
-
-function ArrowLeft({ className }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
-    )
 }
