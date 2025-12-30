@@ -229,7 +229,19 @@ export async function updateProduct(formData) {
             try {
                 const buffer = Buffer.from(await file.arrayBuffer());
                 const fileName = `${Date.now()}-img${i}-${file.name.replace(/\s+/g, '-')}`;
-                fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+                // Ensure directory existence (redundant but safe)
+                if (!fs.existsSync(uploadDir)) {
+                    try {
+                        fs.mkdirSync(uploadDir, { recursive: true });
+                    } catch (mkdirErr) {
+                        console.error('Error creating upload dir:', mkdirErr);
+                        throw new Error('Failed to create upload directory');
+                    }
+                }
+
+                const fullPath = path.join(uploadDir, fileName);
+                console.log(`[updateProduct] Writing file to: ${fullPath}`);
+                fs.writeFileSync(fullPath, buffer);
 
                 const publicPath = `/uploads/${fileName}`;
 
@@ -237,7 +249,10 @@ export async function updateProduct(formData) {
                 newImages[i] = publicPath;
 
             } catch (e) {
-                console.error(`Failed to upload image_${i}: ${e}`);
+                console.error(`Failed to upload image_${i}:`, e);
+                // Continue despite one image failing? Or throw?
+                // Let's log and maybe not throw to save partial work, but user sees error 'server exception' usually denotes crash.
+                // If we catch here, we avoid the 500 crash.
             }
         }
     }
