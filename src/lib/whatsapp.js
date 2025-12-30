@@ -19,7 +19,7 @@ export function generateOrderMessage(order) {
 ${itemsList}
 
 *Pagamento:* ${order.paymentMethod === 'whatsapp' ? 'A Combinar' : 'Pix/Cartão'}
-*Entrega:* ${order.shippingMethod === 'pickup' ? 'Retirada' : 'Entrega'}
+*Endereço:* ${order.customerAddress ? `${order.customerAddress} - ${order.customerCity}` : 'Não informado'}
 
 Aguardando confirmação!`;
 }

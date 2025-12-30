@@ -61,7 +61,10 @@ export default function CheckoutPage() {
                 items: cart,
                 total: cartTotal + shippingCost,
                 paymentMethod: paymentMethod,
-                customerPhone: formData.phone // Pass phone to action
+                customerPhone: formData.phone,
+                customerAddress: formData.address,
+                customerCity: formData.city,
+                customerZip: formData.postalCode
             });
 
             console.log('[Client Checkout] Server Action Result:', res);
