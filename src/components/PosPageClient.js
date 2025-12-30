@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import PosProductGrid from '@/components/PosProductGrid';
 import PosCart from '@/components/PosCart';
-import { createOrder } from '@/app/actions/orders';
+import { submitPosOrder } from '@/app/actions/pos-actions';
 import { toast } from 'react-hot-toast'; // Assuming we have toast, if not we use alert
 
 // This would strictly come from DB props in real implementation
@@ -44,7 +44,7 @@ export default function PosPage({ products }) {
 
     const handleCheckout = async ({ customerName, customerPhone, total, paymentMethod }) => {
         try {
-            const orderId = await createOrder({
+            const orderId = await submitPosOrder({
                 customerName: customerName || 'Venda Balcão',
                 customerEmail: 'pdv@loja.com',
                 customerPhone: customerPhone,
@@ -118,6 +118,7 @@ export default function PosPage({ products }) {
                     cart={cart}
                     updateQuantity={updateQuantity}
                     removeFromCart={removeFromCart}
+                    onCheckout={handleCheckout}
                 />
             </div>
 
