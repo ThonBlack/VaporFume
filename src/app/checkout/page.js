@@ -43,6 +43,10 @@ export default function CheckoutPage() {
                 total: cartTotal + shippingCost
             });
 
+            if (typeof processCheckout !== 'function') {
+                throw new Error('Server Action processCheckout is not defined! Check server logs.');
+            }
+
             const res = await processCheckout({
                 customerName: formData.name,
                 customerEmail: formData.email,
