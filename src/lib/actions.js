@@ -100,7 +100,10 @@ export async function createProduct(formData) {
             try {
                 const buffer = Buffer.from(await file.arrayBuffer());
                 const fileName = `${Date.now()}-img${i}-${file.name.replace(/\s+/g, '-')}`;
-                fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+                const fullPath = path.join(uploadDir, fileName);
+                fs.writeFileSync(fullPath, buffer);
+                try { fs.chmodSync(fullPath, 0o644); } catch (e) { console.error('Chmod failed:', e); }
+
                 savedImages.push(`/uploads/${fileName}`);
             } catch (e) {
                 console.error(`Failed to upload image_${i}:`, e);
@@ -252,6 +255,7 @@ export async function updateProduct(formData) {
                 const fullPath = path.join(uploadDir, fileName);
                 console.log(`[updateProduct] Writing file to: ${fullPath}`);
                 fs.writeFileSync(fullPath, buffer);
+                try { fs.chmodSync(fullPath, 0o644); } catch (e) { console.error('Chmod failed:', e); }
 
                 const publicPath = `/uploads/${fileName}`;
 

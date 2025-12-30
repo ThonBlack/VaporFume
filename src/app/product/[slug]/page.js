@@ -1,6 +1,8 @@
 import { getProduct } from '@/lib/actions';
 import ProductView from '@/components/ProductView';
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ params }) {
     const { slug } = await params;
     const product = await getProduct(slug);
