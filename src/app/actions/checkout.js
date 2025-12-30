@@ -46,7 +46,7 @@ export async function processCheckout(data) {
 
         // WhatsApp or Card (Manual)
         const message = generateOrderMessage({ ...data, id: orderId });
-        const link = generateWhatsAppLink(settings?.whatsapp || '5567999999999', message);
+        const link = generateWhatsAppLink(settings?.whatsapp_number || '5567999999999', message);
 
         return { orderId, redirectUrl: link };
 
