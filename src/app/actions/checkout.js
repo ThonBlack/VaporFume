@@ -5,22 +5,28 @@ import { getSettings } from '@/app/actions/settings';
 import { generateWhatsAppLink, generateOrderMessage } from '@/lib/whatsapp';
 import { createPixPayment } from '@/lib/mercadopago';
 
-export async function processCheckout(data) {
+console.log('[Checkout] Starting processCheckout with data:', JSON.stringify(data, null, 2));
+
+try {
     // 1. Create Order in Database
+    console.log('[Checkout] Creating DB Order...');
     const orderId = await createDbOrder({
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         total: data.total,
         items: data.items,
-        // Add extra metadata columns if needed later, for now relying on basic schema
+        customerPhone: data.customerPhone
     });
+    console.log('[Checkout] Order Created! ID:', orderId);
 
-    // Re-fetch full order to generate message correctly
-    // (In a real app, optimize this to avoid re-fetch)
+    // Re-fetch full order
     const order = { ...data, id: orderId, paymentMethod: data.paymentMethod };
 
+    console.log('[Checkout] Fetching Settings...');
     const settings = await getSettings();
-    const whatsappNumber = settings.whatsapp_number;
+    console.log('[Checkout] Settings fetched:', settings);
+
+    const whatsappNumber = settings?.whatsapp_number;
 
     let result = {
         orderId,
@@ -30,22 +36,29 @@ export async function processCheckout(data) {
 
     // 2. Handle Payment Method
     if (data.paymentMethod === 'whatsapp') {
-        // A Combinar: Redirect to WhatsApp
+        console.log('[Checkout] Payment Method: WhatsApp');
         if (whatsappNumber) {
             const message = generateOrderMessage(order);
             result.redirectUrl = generateWhatsAppLink(whatsappNumber, message);
+            console.log('[Checkout] WhatsApp Link Generated');
+        } else {
+            console.warn('[Checkout] No WhatsApp number found in settings.');
         }
     } else if (data.paymentMethod === 'mercadopago') {
-        // Mercado Pago Pix
+        console.log('[Checkout] Payment Method: Mercado Pago');
         try {
             const pix = await createPixPayment(order);
             result.pixData = pix;
         } catch (error) {
-            console.error('Payment Error:', error);
-            // Fallback to whatsapp if payment fails? Or just return error
+            console.error('[Checkout] Payment Error:', error);
             return { error: 'Erro ao gerar Pix. Verifique as configurações.' };
         }
     }
 
     return result;
+
+} catch (error) {
+    console.error('[Checkout] CRITICAL ERROR:', error);
+    return { error: 'Erro interno no servidor: ' + error.message };
+}
 }
