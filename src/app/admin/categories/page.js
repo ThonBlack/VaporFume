@@ -2,6 +2,8 @@ import { getCategories, createCategory, deleteCategory } from '@/app/actions/cat
 import CategoryManager from '@/components/CategoryManager';
 import { FolderTree } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminCategoriesPage() {
     const categories = await getCategories();
 
