@@ -63,6 +63,9 @@ export default function RootLayout({ children }) {
         <InstallPrompt />
         <ServiceWorkerRegister />
         {children}
+        <footer className="py-6 text-center text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
+          <p>System v2.1 (Debug Active)</p>
+        </footer>
       </body>
     </html>
   );
