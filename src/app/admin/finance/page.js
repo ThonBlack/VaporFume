@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { orders, orderItems, products } from '@/db/schema';
 import { desc, eq, inArray } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function FinancePage() {
     // Fetch all paid/completed orders
     const paidOrders = await db.query.orders.findMany({
@@ -106,8 +108,8 @@ export default async function FinancePage() {
                                         <td className="p-4 font-bold text-blue-600">R$ {row.profit.toFixed(2)}</td>
                                         <td className="p-4">
                                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${row.margin > 30 ? 'bg-green-100 text-green-700' :
-                                                    row.margin > 0 ? 'bg-yellow-100 text-yellow-700' :
-                                                        'bg-red-100 text-red-700'
+                                                row.margin > 0 ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-red-100 text-red-700'
                                                 }`}>
                                                 {row.margin.toFixed(1)}%
                                             </span>

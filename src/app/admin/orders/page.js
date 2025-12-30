@@ -2,6 +2,8 @@ import { getOrders } from '@/app/actions/orders';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminOrdersPage() {
     const orders = await getOrders();
 
@@ -40,7 +42,7 @@ export default async function AdminOrdersPage() {
                             <div className="flex items-center gap-2">
                                 {/* Dot indicator */}
                                 <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'completed' ? 'bg-green-500' :
-                                        order.status === 'pending' ? 'bg-blue-500' : 'bg-gray-300'
+                                    order.status === 'pending' ? 'bg-blue-500' : 'bg-gray-300'
                                     }`}></div>
                                 <span className="text-xs font-medium text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
                                     Pagamento a combinar

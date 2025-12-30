@@ -5,6 +5,8 @@ import ProductForm from '@/components/ProductForm';
 import { updateProduct } from '@/lib/actions';
 import { notFound } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default async function EditProductPage({ params }) {
     const { id } = await params;
 
