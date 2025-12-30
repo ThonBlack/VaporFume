@@ -145,6 +145,7 @@ export async function createProduct(formData) {
             slug: name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
             description,
             price,
+            oldPrice: parseFloat(formData.get('oldPrice')) || null,
             costPrice: parseFloat(formData.get('costPrice')) || 0,
             image: mainImage,
             images: JSON.stringify(savedImages), // Save all images
@@ -333,6 +334,7 @@ export async function updateProduct(formData) {
         const updateData = {
             name,
             price,
+            oldPrice: parseFloat(formData.get('oldPrice')) || null,
             costPrice: parseFloat(formData.get('costPrice')) || 0,
             categoryId,
             description,
