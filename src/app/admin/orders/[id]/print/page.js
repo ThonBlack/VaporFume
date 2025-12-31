@@ -13,7 +13,7 @@ export default async function PrintOrderPage({ params }) {
     if (!order) return <div>Pedido não encontrado</div>;
 
     // URL for Customer Tracking
-    const trackUrl = \`https://vaporfume.com/track/\${orderId}\`;
+    const trackUrl = `https://vaporfume.com/track/${orderId}`;
 
     return (
         <div style={{
@@ -25,14 +25,14 @@ export default async function PrintOrderPage({ params }) {
             background: '#fff',
             padding: '0'
         }}>
-            <style>{\`
+            <style>{`
                 @media print {
                     @page { size: 80mm auto; margin: 0; }
                     body { margin: 0; padding: 0; width: 78mm; }
                     html, body { height: auto; }
                     header, footer, .no-print { display: none !important; }
                 }
-            \`}</style>
+            `}</style>
 
             {/* Wrapper restricted to ~75mm safe area */}
             <div style={{
@@ -50,7 +50,7 @@ export default async function PrintOrderPage({ params }) {
                 {/* Header / Logo */}
                 <div style={{ width: '100%', marginBottom: '15px' }}>
                     <div className="w-full flex justify-center mb-2">
-                         {/* Minimalist Header Text or Logo - User asked for "Vapor Fumê" */}
+                        {/* Minimalist Header Text or Logo - User asked for "Vapor Fumê" */}
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, letterSpacing: '2px' }}>VAPOR FUMÊ</h1>
                     </div>
                 </div>
@@ -69,7 +69,7 @@ export default async function PrintOrderPage({ params }) {
                         value={trackUrl}
                         size={160}
                         style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                        viewBox={\`0 0 256 256\`}
+                        viewBox={`0 0 256 256`}
                     />
                 </div>
 
