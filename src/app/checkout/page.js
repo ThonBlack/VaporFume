@@ -438,7 +438,7 @@ export default function CheckoutPage() {
                                                 <input type="radio" name="payment_step1" className="w-4 h-4 text-blue-600 focus:ring-blue-500" checked={paymentMethod === 'mercadopago'} onChange={() => setPaymentMethod('mercadopago')} />
                                                 <div className="flex items-center gap-2">
                                                     <div className="bg-white p-1 rounded border border-gray-100 w-6 h-6 flex items-center justify-center">
-                                                        <img src="https://logodownload.org/wp-content/uploads/2019/06/mercado-livre-logo-icone.png" className="w-full h-full object-contain" alt="Pix" />
+                                                        <img src="https://img.icons8.com/color/48/mercado-pago.png" className="w-full h-full object-contain" alt="Pix" />
                                                     </div>
                                                     <span className="text-sm font-medium text-gray-900">Pix Automático (Mercado Pago)</span>
                                                 </div>

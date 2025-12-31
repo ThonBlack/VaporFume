@@ -13,7 +13,8 @@ export default async function PrintOrderPage({ params }) {
     if (!order) return <div>Pedido não encontrado</div>;
 
     // URL for Customer Tracking
-    const trackUrl = `https://vaporfume.com/track/${orderId}`;
+    // Using VPS IP until domain is ready
+    const trackUrl = `http://72.61.135.4:3000/track/${orderId}`;
 
     return (
         <div style={{
