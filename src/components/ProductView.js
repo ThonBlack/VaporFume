@@ -78,7 +78,8 @@ export default function ProductView({ product }) {
             productName: product.name,
             price: product.price,
             variants: selectedFlavors,
-            isKit: isKit
+            isKit: isKit,
+            image: activeImage // Add image to cart
         };
         console.log('Adding to cart:', payload);
         // Assuming we use localStorage or global state. 

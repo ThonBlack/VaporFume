@@ -55,11 +55,13 @@ export async function calculateShipping(cep) {
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error('[Shipping] API Error:', response.status, errText);
+            console.error('[Shipping] MELHOR ENVIO API ERROR:', response.status, errText);
             throw new Error(`Erro API Melhor Envio: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('[Shipping] Melhor Envio Response:', JSON.stringify(data, null, 2));
+
         // data is an array of quotes.
         // We want the cheapest one (usually PAC) or MiniEnvio.
 

@@ -12,8 +12,9 @@ export default async function PrintOrderPage({ params }) {
 
     if (!order) return <div>Pedido não encontrado</div>;
 
-    // QR Data
-    const qrData = `Pedido #${order.id}\nCli: ${order.customerName}\nTotal: R$ ${order.total.toFixed(2)}\n${order.items.map(i => `${i.quantity}x ${i.productName}`).join('\n')}`;
+    // QR Data - Rich Content for "Digital Receipt"
+    const itemsList = order.items.map(i => `• ${i.quantity}x ${i.productName} ${i.variantName ? `(${i.variantName})` : ''}`).join('\n');
+    const qrData = `VAPOR FUMÊ\n----------------\nPedido: #${order.id}\nData: ${new Date(order.createdAt).toLocaleDateString('pt-BR')}\nCliente: ${order.customerName}\n----------------\nITENS:\n${itemsList}\n----------------\nTOTAL: R$ ${order.total.toFixed(2)}\nPagamento: ${order.paymentMethod}`;
 
     return (
         <div style={{
@@ -45,54 +46,45 @@ export default async function PrintOrderPage({ params }) {
                 flexDirection: 'column',
                 alignItems: 'center',
                 textAlign: 'center',
-                fontFamily: 'sans-serif',
+                fontFamily: 'monospace', /* Monospace acts better for receipt vibe */
                 boxSizing: 'border-box',
                 borderBottom: '1px dashed #000'
             }}>
                 {/* Header / Logo */}
                 <div style={{ width: '100%', marginBottom: '10px' }}>
                     <div className="w-full flex justify-center mb-2">
-                        {/* Use simple text or small logo for thermal print */}
-                        <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>VAPOR FUMÊ</h1>
+                        <h1 style={{ fontSize: '1.4rem', fontWeight: 'bold', margin: 0 }}>VAPOR FUMÊ</h1>
                     </div>
                 </div>
 
                 {/* Info */}
-                <div style={{ marginBottom: '15px' }}>
-                    <p style={{ fontSize: '0.8rem', margin: '0' }}>Pedido #{order.id}</p>
+                <div style={{ marginBottom: '10px' }}>
+                    <p style={{ fontSize: '0.9rem', margin: '0' }}>Pedido #{order.id}</p>
                     <p style={{ fontSize: '0.8rem', margin: '0' }}>{new Date(order.createdAt).toLocaleString('pt-BR')}</p>
                 </div>
 
                 {/* Customer Info */}
-                <div style={{ marginBottom: '20px', width: '100%', borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '10px 0' }}>
+                <div style={{ marginBottom: '15px', width: '100%', borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '10px 0' }}>
                     <p style={{ fontSize: '1.2rem', margin: '0', fontWeight: 'bold' }}>
                         {order.customerName}
                     </p>
                     {order.customerPhone && <p style={{ fontSize: '0.9rem', margin: '5px 0 0 0' }}>{order.customerPhone}</p>}
                 </div>
 
-                {/* Items */}
-                <div style={{ width: '100%', textAlign: 'left', marginBottom: '20px' }}>
-                    {order.items.map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
-                            <span style={{ flex: 1 }}>
-                                {item.quantity}x {item.productName}
-                                {item.variantName && <span style={{ display: 'block', fontSize: '0.8rem', color: '#555' }}>- {item.variantName}</span>}
-                            </span>
-                            <span style={{ fontWeight: 'bold' }}>
-                                R$ {(item.price * item.quantity).toFixed(2)}
-                            </span>
-                        </div>
-                    ))}
+                {/* Items HIDDEN from visual, only in QR */}
+                <div style={{ width: '100%', textAlign: 'center', marginBottom: '10px', fontStyle: 'italic', fontSize: '0.8rem', color: '#666' }}>
+                    * Detalhes dos itens no QR Code *
+                    <br />
+                    (Design Discreto)
                 </div>
 
                 {/* Totals */}
-                <div style={{ width: '100%', borderTop: '1px solid #000', paddingTop: '10px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                <div style={{ width: '100%', borderTop: '1px dashed #000', paddingTop: '10px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.4rem', fontWeight: 'bold' }}>
                         <span>TOTAL</span>
                         <span>R$ {order.total.toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginTop: '5px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.0rem', marginTop: '5px' }}>
                         <span>Pagamento:</span>
                         <span>
                             {order.paymentMethod === 'whatsapp' ? 'A Combinar' :
@@ -105,10 +97,10 @@ export default async function PrintOrderPage({ params }) {
                 </div>
 
                 {/* QR Code */}
-                <div style={{ padding: '0', margin: '0 0 20px 0' }}>
+                <div style={{ padding: '0', margin: '0 0 10px 0' }}>
                     <QRCode
                         value={qrData}
-                        size={100}
+                        size={150} // Bigger QR
                         style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                         viewBox={`0 0 256 256`}
                     />

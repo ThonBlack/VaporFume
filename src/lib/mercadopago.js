@@ -46,6 +46,9 @@ export async function createPixPayment(paymentInput) {
         };
     } catch (error) {
         console.error('Mercado Pago Error:', error);
+        if (error.response) {
+            console.error('Mercado Pago Response Data:', JSON.stringify(error.response.data, null, 2));
+        }
         throw new Error('Falha ao criar pagamento Pix: ' + (error.cause || error.message));
     }
 }

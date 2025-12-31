@@ -19,7 +19,9 @@ export default function CheckoutPage() {
         email: '',
         phone: '',
         postalCode: '',
-        address: '',
+        address: '', // Street
+        number: '', // House Number
+        neighborhood: '', // Bairro
         city: '',
         state: ''
     });
@@ -85,7 +87,8 @@ export default function CheckoutPage() {
                 // Update Address
                 setFormData(prev => ({
                     ...prev,
-                    address: `${data.logradouro}, ${data.bairro}`,
+                    address: data.logradouro,
+                    neighborhood: data.bairro,
                     city: data.localidade,
                     state: data.uf
                 }));
@@ -149,7 +152,8 @@ export default function CheckoutPage() {
                 total: cartTotal + shippingCost,
                 paymentMethod: paymentMethod,
                 customerPhone: formData.phone,
-                customerAddress: formData.address, // Street + Neighborhood
+                customerPhone: formData.phone,
+                customerAddress: `${formData.address}, ${formData.number} - ${formData.neighborhood}`, // Combine
                 customerCity: formData.city,
                 customerState: formData.state,
                 customerZip: formData.postalCode,
@@ -368,14 +372,37 @@ export default function CheckoutPage() {
                                         )}
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Endereço (Rua, Bairro, Nº)</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Rua / Logradouro</label>
                                             <input
                                                 type="text"
                                                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
-                                                placeholder="Preenchido Automaticamente pelo CEP"
+                                                placeholder="Rua..."
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
                                             />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                    placeholder="123"
+                                                    value={formData.number}
+                                                    onChange={e => setFormData({ ...formData, number: e.target.value })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all"
+                                                    placeholder="Bairro"
+                                                    value={formData.neighborhood}
+                                                    onChange={e => setFormData({ ...formData, neighborhood: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -389,7 +416,10 @@ export default function CheckoutPage() {
                                         formData.cpf.length < 14 || // Simple length check for mask
                                         !formData.phone ||
                                         !formData.email ||
+                                        !formData.email ||
                                         !formData.address ||
+                                        !formData.number || // Validate Number
+                                        !formData.neighborhood ||
                                         !formData.city ||
                                         isCalculatingShipping ||
                                         (shippingCost === 0 && !shippingService) // Ensure shipping was calculated (unless error fallback set cost)
