@@ -11,6 +11,7 @@ export default function SettingsForm({ initialSettings }) {
     const [formData, setFormData] = useState({
         mercadopago_access_token: initialSettings.mercadopago_access_token || '',
         melhor_envio_token: initialSettings.melhor_envio_token || '',
+        melhor_envio_sandbox: initialSettings.melhor_envio_sandbox || 'false',
         whatsapp_number: initialSettings.whatsapp_number || '',
         banner_image_url: initialSettings.banner_image_url || '',
         banner_title: initialSettings.banner_title || 'Bem-vindo à Vapor Fumê',
@@ -159,6 +160,17 @@ export default function SettingsForm({ initialSettings }) {
                             onChange={handleChange}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                         />
+                        <div className="flex items-center gap-2 mt-3">
+                            <input
+                                type="checkbox"
+                                id="me_sandbox"
+                                name="melhor_envio_sandbox"
+                                checked={formData.melhor_envio_sandbox === 'true'}
+                                onChange={(e) => setFormData({ ...formData, melhor_envio_sandbox: e.target.checked ? 'true' : 'false' })}
+                                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor="me_sandbox" className="text-sm text-gray-700">Usar Ambiente de Teste (Sandbox)</label>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -14,19 +14,21 @@ export async function calculateShipping(cep) {
             return { price: 25.00, error: 'Token não configurado' }; // Fallback
         }
 
-        // Clean CEP
+        // cleanCep
         const cleanCep = cep.replace(/\D/g, '');
         if (cleanCep.length !== 8) return { price: 0, error: 'CEP Inválido' };
 
-        // Melhor Envio API Endpoint (Sandbox or Prod? usually prod for prod token)
-        // We will assume Production for the live token.
-        // User didn't specify environment, but token is usually prod.
+        // Determine Environment
+        const isSandbox = settings.melhor_envio_sandbox === 'true';
+        const apiUrl = isSandbox
+            ? 'https://sandbox.melhorenvio.com.br/api/v2/me/shipment/calculate'
+            : 'https://melhorenvio.com.br/api/v2/me/shipment/calculate';
+
+        console.log(`[Shipping] Using ${isSandbox ? 'SANDBOX' : 'PRODUCTION'} URL: ${apiUrl}`);
 
         // Payload for 1 item generic (15x15x15, 0.3kg)
         const payload = {
-            from: { postal_code: '38000000' }, // Origin: Uberaba (Generic Central?) - Wait, user is in Uberaba.
-            // We should probably use the store's CEP from settings if available, or hardcode Uberaba generic.
-            // Let's use a generic Uberaba CEP for origin if not set. 38010-000 is Center.
+            from: { postal_code: '38000000' },
             to: { postal_code: cleanCep },
             package: {
                 height: 15,
@@ -38,11 +40,10 @@ export async function calculateShipping(cep) {
                 receipt: false,
                 own_hand: false
             },
-            services: '1,2' // 1: PAC, 2: SEDEX (Correios) - IDs might change, better to ask for all and filter.
-            // Actually, let's just send the payload and see what returns.
+            services: '1,2'
         };
 
-        const response = await fetch('https://melhorenvio.com.br/api/v2/me/shipment/calculate', {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',

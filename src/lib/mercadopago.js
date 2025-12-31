@@ -20,7 +20,7 @@ export async function createPixPayment(paymentInput) {
 
     try {
         const paymentData = {
-            transaction_amount: Number(paymentInput.amount),
+            transaction_amount: Number(parseFloat(paymentInput.amount).toFixed(2)),
             description: paymentInput.description,
             payment_method_id: 'pix',
             payer: {
@@ -37,10 +37,15 @@ export async function createPixPayment(paymentInput) {
         console.log('[MercadoPago] Payload:', JSON.stringify(paymentData, null, 2));
 
         const result = await payment.create({ body: paymentData });
+
+        const qrCode = result.point_of_interaction.transaction_data.qr_code;
+        console.log('[MercadoPago] QR Code Generated (Length):', qrCode.length);
+        console.log('[MercadoPago] QR Code Start:', qrCode.substring(0, 50));
+
         return {
             id: result.id,
             status: result.status,
-            qr_code: result.point_of_interaction.transaction_data.qr_code,
+            qr_code: qrCode,
             qr_code_base64: result.point_of_interaction.transaction_data.qr_code_base64,
             ticket_url: result.point_of_interaction.transaction_data.ticket_url
         };
