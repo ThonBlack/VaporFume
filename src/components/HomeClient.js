@@ -11,7 +11,7 @@ export default function HomeClient({ products, categories }) {
 
     const filteredProducts = activeCategory === 'all'
         ? products
-        : products.filter(p => p.category === activeCategory); // p.category is slug/id
+        : products.filter(p => p.categoryId === activeCategory);
 
     return (
         <div style={{ minHeight: '100vh', paddingBottom: '40px' }}>

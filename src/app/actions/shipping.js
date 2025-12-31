@@ -56,8 +56,12 @@ export async function calculateShipping(cep) {
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error('[Shipping] MELHOR ENVIO API ERROR:', response.status, errText);
-            throw new Error(`Erro API Melhor Envio: ${response.status}`);
+            console.error('[Shipping] MELHOR ENVIO API ERROR Details:');
+            console.error('Status:', response.status);
+            console.error('URL:', apiUrl);
+            console.error('Token:', token ? `${token.slice(0, 10)}...` : 'NULL');
+            console.error('Response Body:', errText);
+            throw new Error(`Erro API Melhor Envio: ${response.status} - ${errText}`);
         }
 
         const data = await response.json();

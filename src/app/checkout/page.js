@@ -291,17 +291,19 @@ export default function CheckoutPage() {
                                         />
                                     </div>
 
-                                    {/* CPF Field - Required for Pix */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">CPF (Necessário para Pix)</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all font-mono"
-                                            placeholder="000.000.000-00"
-                                            value={formData.cpf}
-                                            onChange={handleCpfChange}
-                                        />
-                                    </div>
+                                    {/* CPF Field - Required Only for Pix */}
+                                    {paymentMethod === 'mercadopago' && (
+                                        <div className="animate-in fade-in slide-in-from-top-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">CPF (Obrigatório para Pix)</label>
+                                            <input
+                                                type="text"
+                                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all font-mono"
+                                                placeholder="000.000.000-00"
+                                                value={formData.cpf}
+                                                onChange={handleCpfChange}
+                                            />
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -405,28 +407,65 @@ export default function CheckoutPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Payment Method Selector Moved Here or Step 2? */}
+                                    {/* Keeping Logic: Step 1 is Data, Step 2 is Payment.
+                                        But wait, if CPF is conditional on Payment Method, user must select Payment Method IN STEP 1 or PRIOR?
+                                        Currently Payment Method is Step 2.
+                                        
+                                        User Requirement: "Preenchimento do CPF deixe disponivel apenas para quem optar pelo PIX"
+                                        
+                                        Problem: Step 1 is "Seus Dados", Step 2 is "Pagamento".
+                                        Solution: Move Payment Method selection to Step 1 OR Ask "Como você quer pagar?" early.
+                                        OR: Just Show CPF always but only MARK it required if they select Pix later?
+                                        
+                                        Better UX: Let's move Payment Selection to Step 1 bottom or Top.
+                                        Let's put Payment Selection inside Step 1 for simplicity now.
+                                     */}
+
+                                    <div className="mt-4 border-t pt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-3">Forma de Pagamento</label>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <label className={`cursor-pointer border rounded-xl p-3 flex items-center gap-3 transition-all ${paymentMethod === 'whatsapp' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200 hover:border-gray-300'}`}>
+                                                <input type="radio" name="payment_step1" className="w-4 h-4 text-green-600 focus:ring-green-500" checked={paymentMethod === 'whatsapp'} onChange={() => setPaymentMethod('whatsapp')} />
+                                                <div className="flex items-center gap-2">
+                                                    <MessageCircle className="w-5 h-5 text-green-600" />
+                                                    <span className="text-sm font-medium text-gray-900">Combinar no WhatsApp</span>
+                                                </div>
+                                            </label>
+
+                                            <label className={`cursor-pointer border rounded-xl p-3 flex items-center gap-3 transition-all ${paymentMethod === 'mercadopago' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 hover:border-gray-300'}`}>
+                                                <input type="radio" name="payment_step1" className="w-4 h-4 text-blue-600 focus:ring-blue-500" checked={paymentMethod === 'mercadopago'} onChange={() => setPaymentMethod('mercadopago')} />
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-white p-1 rounded border border-gray-100 w-6 h-6 flex items-center justify-center">
+                                                        <img src="https://logodownload.org/wp-content/uploads/2019/06/mercado-livre-logo-icone.png" className="w-full h-full object-contain" alt="Pix" />
+                                                    </div>
+                                                    <span className="text-sm font-medium text-gray-900">Pix Automático (Mercado Pago)</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
                                 </div>
 
                                 <button
-                                    onClick={() => setStep(2)}
+                                    onClick={handleProcess} // DIRECT PROCESS - Merge Step 1 & 2
                                     disabled={
-                                        // Validation: All fields + valid CEP/Shipping
                                         !formData.name ||
-                                        !formData.cpf ||
-                                        formData.cpf.length < 14 || // Simple length check for mask
+                                        (paymentMethod === 'mercadopago' && (!formData.cpf || formData.cpf.length < 14)) || // Conditionally Verify CPF
                                         !formData.phone ||
                                         !formData.email ||
-                                        !formData.email ||
                                         !formData.address ||
-                                        !formData.number || // Validate Number
+                                        !formData.number ||
                                         !formData.neighborhood ||
                                         !formData.city ||
                                         isCalculatingShipping ||
-                                        (shippingCost === 0 && !shippingService) // Ensure shipping was calculated (unless error fallback set cost)
+                                        (shippingCost === 0 && !shippingService) ||
+                                        isProcessing
                                     }
-                                    className="w-full bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                                 >
-                                    Ir para Pagamento <ArrowRight className="w-4 h-4" />
+                                    {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Finalizar Pedido'} <ArrowRight className="w-4 h-4" />
                                 </button>
                             </div>
                         )}
