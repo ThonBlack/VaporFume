@@ -28,19 +28,21 @@ export default function Header() {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <button style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        fontSize: '0.7rem'
-                    }}>
-                        <User size={24} />
-                        <span>Conta</span>
-                    </button>
+                    <Link href="/account" style={{ textDecoration: 'none' }}>
+                        <button style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            fontSize: '0.7rem'
+                        }}>
+                            <User size={24} />
+                            <span>Conta</span>
+                        </button>
+                    </Link>
 
                     <button style={{
                         background: 'none',
