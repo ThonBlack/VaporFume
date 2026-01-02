@@ -72,3 +72,41 @@ export async function getCustomersForEmail() {
 
     return uniqueCustomers;
 }
+
+export async function saveRestockSubscription(data) {
+    const { productId, variantName, email, phone } = data;
+    try {
+        await db.insert(restockSubscriptions).values({
+            productId,
+            variantName,
+            contactEmail: email,
+            contactPhone: phone
+        });
+        return { success: true };
+    } catch (error) {
+        console.error('Error saving subscription:', error);
+        return { success: false, error: 'Failed to save' };
+    }
+}
+
+export async function saveFavorite(data) {
+    const { productId, phone } = data;
+    try {
+        // Check if already exists to avoid duplicates
+        const existing = await db.select()
+            .from(favorites)
+            .where(and(eq(favorites.userPhone, phone), eq(favorites.productId, productId)))
+            .get();
+
+        if (existing) return { success: true, message: 'Already favorited' };
+
+        await db.insert(favorites).values({
+            userPhone: phone,
+            productId
+        });
+        return { success: true };
+    } catch (error) {
+        console.error('Error saving favorite:', error);
+        return { success: false, error: 'Failed to save' };
+    }
+}
