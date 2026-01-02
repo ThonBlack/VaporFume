@@ -47,7 +47,7 @@ export default function InstallPrompt() {
             <div className="bg-white/95 backdrop-blur-md border border-gray-200 p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                        <img src="/assets/app-icon.jpg" alt="App Icon" className="w-full h-full object-cover" />
+                        <img src="/assets/icon-v2.png" alt="App Icon" className="w-full h-full object-cover" />
                     </div>
                     <div>
                         <p className="font-bold text-sm text-gray-900 leading-tight">Instalar App</p>

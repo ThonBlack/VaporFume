@@ -1,16 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Bell, Loader2 } from 'lucide-react';
+import { X, Bell, Loader2, Heart } from 'lucide-react';
 import { saveRestockSubscription } from '@/app/actions/marketing'; // We will create this action
 
-export default function NotifyModal({ isOpen, onClose, product, variant }) {
+export default function NotifyModal({ isOpen, onClose, product, variant, mode = 'restock' }) {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
     if (!isOpen) return null;
+
+    const isFavorite = mode === 'favorite';
+    const title = isFavorite ? 'Salvar nos Favoritos' : 'Avise-me quando chegar';
+    const message = isFavorite
+        ? `Receba avisos quando o preço de ${product.name} baixar!`
+        : `O produto ${product.name} - ${variant} está esgotado. Preencha abaixo para receber um alerta.`;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -30,7 +36,7 @@ export default function NotifyModal({ isOpen, onClose, product, variant }) {
             }, 2500);
         } catch (error) {
             console.error(error);
-            alert('Erro ao salvar. Tente novamente.');
+            alert('Erro ao salvar.');
         } finally {
             setLoading(false);
         }
@@ -42,8 +48,8 @@ export default function NotifyModal({ isOpen, onClose, product, variant }) {
                 {/* Header */}
                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                     <div className="flex items-center gap-2 text-gray-800">
-                        <Bell size={20} className="text-yellow-500" />
-                        <h3 className="font-bold">Avise-me quando chegar</h3>
+                        {isFavorite ? <Heart className="text-red-500 fill-red-500" size={20} /> : <Bell size={20} className="text-yellow-500" />}
+                        <h3 className="font-bold">{title}</h3>
                     </div>
                     <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
                         <X size={20} className="text-gray-500" />
@@ -54,19 +60,18 @@ export default function NotifyModal({ isOpen, onClose, product, variant }) {
                 <div className="p-6">
                     {success ? (
                         <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in">
-                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
-                                <Bell size={32} />
+                            <div className={`w-16 h-16 ${isFavorite ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} rounded-full flex items-center justify-center mb-4`}>
+                                {isFavorite ? <Heart size={32} className="fill-current" /> : <Bell size={32} />}
                             </div>
-                            <h4 className="text-xl font-bold text-gray-900 mb-2">Aviso Confirmado!</h4>
+                            <h4 className="text-xl font-bold text-gray-900 mb-2">{isFavorite ? 'Favorito Salvo!' : 'Aviso Confirmado!'}</h4>
                             <p className="text-gray-600">
-                                Assim que <strong>{product.name} ({variant})</strong> chegar, nós te avisaremos na hora! 🚀
+                                {isFavorite ? 'Vamos te avisar das melhores ofertas.' : 'Assim que chegar, nós te avisamos!'} 🚀
                             </p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                             <p className="text-sm text-gray-600 mb-2">
-                                O produto <strong>{product.name} - {variant}</strong> está esgotado.
-                                Preencha abaixo para receber um alerta exclusivo.
+                                {message}
                             </p>
 
                             <div>

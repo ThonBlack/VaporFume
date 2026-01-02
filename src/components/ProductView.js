@@ -314,10 +314,14 @@ export default function ProductView({ product }) {
                             onClose={() => setIsNotifyOpen(false)}
                             product={product}
                             variant={selectedFlavors[0]}
+                            mode={isNotifyOpen === 'favorite' ? 'favorite' : 'restock'}
                         />
 
                         <div className="flex gap-6 mb-8 text-gray-500 text-sm">
-                            <button className="flex items-center gap-2 hover:text-red-500 transition-colors">
+                            <button
+                                onClick={() => setIsNotifyOpen('favorite')}
+                                className="flex items-center gap-2 hover:text-red-500 transition-colors"
+                            >
                                 <Heart size={18} /> Salvar favorito
                             </button>
                             <button className="flex items-center gap-2 hover:text-blue-500 transition-colors">
