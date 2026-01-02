@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Package, ShoppingCart, DollarSign, LogOut, Settings, Monitor, FolderTree, Mail, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, DollarSign, LogOut, Settings, Monitor, FolderTree, Mail, Menu, X, Smartphone } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 export default function AdminLayout({ children }) {
@@ -48,6 +48,7 @@ export default function AdminLayout({ children }) {
                     <NavLink href="/admin/orders" icon={<ShoppingCart size={20} />} label="Pedidos" active={pathname === '/admin/orders'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/finance" icon={<DollarSign size={20} />} label="Financeiro" active={pathname === '/admin/finance'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/marketing" icon={<Mail size={20} />} label="Marketing" active={pathname === '/admin/marketing'} onClick={() => setIsSidebarOpen(false)} />
+                    <NavLink href="/admin/automations" icon={<Smartphone size={20} />} label="Automações" active={pathname === '/admin/automations'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/settings" icon={<Settings size={20} />} label="Configurações" active={pathname === '/admin/settings'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/pos" icon={<Monitor size={20} />} label="PDV (Caixa)" active={pathname === '/admin/pos'} onClick={() => setIsSidebarOpen(false)} />
                 </nav>
