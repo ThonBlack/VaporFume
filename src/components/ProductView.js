@@ -4,20 +4,22 @@ import { useState } from 'react';
 import Header from '@/components/Header';
 import { Star, ArrowLeft, Truck, Lock, MessageCircle, Heart, Share2, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
-import { createOrder } from '@/app/actions/orders'; // We might use this for "Add to Cart" later, or use context. For now usually specific context.
+import NotifyModal from '@/components/NotifyModal';
+import { createOrder } from '@/app/actions/orders';
 
 export default function ProductView({ product }) {
-    // Kit Logic: If bundle_size > 1, allow multi-select
+    // Kit Logic
     const isKit = product.bundleSize > 1;
     const maxSelect = product.bundleSize || 1;
 
     // State
-    const [selectedFlavors, setSelectedFlavors] = useState([]); // Array of strings
+    const [selectedFlavors, setSelectedFlavors] = useState([]);
     const [cep, setCep] = useState('');
     const [shippingResult, setShippingResult] = useState(null);
+    const [isNotifyOpen, setIsNotifyOpen] = useState(false);
 
-    // Provide backward compatibility if variants are called 'flavors' or 'variants'
-    const availableVariants = product.variants?.filter(v => v.stock > 0) || [];
+    // Show ALL variants, not just available ones
+    const availableVariants = product.variants || [];
 
     const handleFlavorToggle = (flavorName) => {
         // Switch main image if variant has one
@@ -243,21 +245,40 @@ export default function ProductView({ product }) {
                                 ) : (
                                     // STANDARD UI: Buttons
                                     <div className="flex flex-wrap gap-2">
-                                        {availableVariants.map(v => (
-                                            <button
-                                                key={v.name}
-                                                onClick={() => handleFlavorToggle(v.name)}
-                                                className={`
-                                                    px-4 py-2 rounded-lg text-sm font-medium transition-all border
-                                                    ${selectedFlavors.includes(v.name)
-                                                        ? 'border-black bg-black text-white shadow-md'
-                                                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-                                                    }
-                                                `}
-                                            >
-                                                {v.name}
-                                            </button>
-                                        ))}
+                                        {availableVariants.map(v => {
+                                            const isSelected = selectedFlavors.includes(v.name);
+                                            const isOOS = v.stock <= 0;
+
+                                            // Determine style
+                                            let btnClass = "border-gray-200 bg-white text-gray-500 hover:border-gray-300";
+                                            if (isSelected) btnClass = "border-black bg-black text-white shadow-md";
+                                            // if (isOOS && !isSelected) btnClass = "border-gray-100 bg-gray-50 text-gray-300 decoration-slice"; // Option 
+
+                                            return (
+                                                <button
+                                                    key={v.name}
+                                                    onClick={() => handleFlavorToggle(v.name)}
+                                                    className={`
+                                                        ${btnClass}
+                                                        px-4 py-2 rounded-lg text-sm font-medium transition-all border relative overflow-hidden
+                                                    `}
+                                                    style={{
+                                                        opacity: isOOS && !isSelected ? 0.6 : 1,
+                                                    }}
+                                                >
+                                                    {v.name}
+                                                    {/* OOS Marker */}
+                                                    {isOOS && (
+                                                        <span className={`
+                                                            text-[10px] ml-2 font-bold px-1.5 py-0.5 rounded
+                                                            ${isSelected ? 'bg-white text-black' : 'bg-gray-200 text-gray-500'}
+                                                        `}>
+                                                            Esgotado
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -265,17 +286,35 @@ export default function ProductView({ product }) {
 
                         {/* Actions */}
                         <div className="flex flex-col gap-4 mb-4">
-                            <button
-                                onClick={handleBuy}
-                                disabled={selectedFlavors.length !== maxSelect}
-                                className="w-full bg-blue-600 text-white h-14 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
-                            >
-                                {selectedFlavors.length !== maxSelect
-                                    ? (isKit ? `Escolha ${maxSelect - selectedFlavors.length} mais` : 'Selecione um Sabor')
-                                    : 'Comprar Agora'
-                                }
-                            </button>
+                            {/* Notify Logic: If single selection and it's OOS */}
+                            {!isKit && selectedFlavors.length === 1 && availableVariants.find(v => v.name === selectedFlavors[0])?.stock <= 0 ? (
+                                <button
+                                    onClick={() => setIsNotifyOpen(true)}
+                                    className="w-full bg-yellow-500 text-black h-14 rounded-xl font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2"
+                                >
+                                    <Bell size={20} /> Avise-me quando chegar
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleBuy}
+                                    disabled={selectedFlavors.length !== maxSelect}
+                                    className="w-full bg-blue-600 text-white h-14 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
+                                >
+                                    {selectedFlavors.length !== maxSelect
+                                        ? (isKit ? `Escolha ${maxSelect - selectedFlavors.length} mais` : 'Selecione um Sabor')
+                                        : 'Comprar Agora'
+                                    }
+                                </button>
+                            )}
                         </div>
+
+                        {/* Notify Modal */}
+                        <NotifyModal
+                            isOpen={isNotifyOpen}
+                            onClose={() => setIsNotifyOpen(false)}
+                            product={product}
+                            variant={selectedFlavors[0]}
+                        />
 
                         <div className="flex gap-6 mb-8 text-gray-500 text-sm">
                             <button className="flex items-center gap-2 hover:text-red-500 transition-colors">
