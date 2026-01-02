@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link'; // Ensure Link is imported if needed, or remove unused imports
 import Header from '@/components/Header';
 import BannerCarousel from '@/components/BannerCarousel';
-import CategoryFilter from '@/components/CategoryFilter';
 import ProductCard from '@/components/ProductCard';
 
 export default function HomeClient({ products, categories }) {
