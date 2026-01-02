@@ -2,20 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
-import { ShoppingBag, Heart, LogOut, User, Package, Calendar, ChevronRight, Loader2, ArrowRight, Lock, UserPlus } from 'lucide-react';
+import { ShoppingBag, Heart, LogOut, User, Package, Calendar, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
 import { getFavorites, getCustomerOrders } from '@/lib/actions';
-import { registerCustomer, loginCustomer } from '@/app/actions/customer';
 import ProductCard from '@/components/ProductCard';
 import { toast } from 'react-hot-toast';
 
 export default function AccountPage() {
-    const [user, setUser] = useState(null);
-    const [activeTab, setActiveTab] = useState('orders');
+    const [phone, setPhone] = useState('');
+    const [tempPhone, setTempPhone] = useState('');
+    const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'favorites'
     const [loading, setLoading] = useState(false);
-
-    // Auth State
-    const [authMode, setAuthMode] = useState('login'); // login | register
-    const [formData, setFormData] = useState({ phone: '', password: '', name: '' });
 
     // Data
     const [orders, setOrders] = useState([]);
@@ -23,11 +19,10 @@ export default function AccountPage() {
     const [dataLoading, setDataLoading] = useState(false);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem('user_data');
-        if (savedUser) {
-            const parsed = JSON.parse(savedUser);
-            setUser(parsed);
-            fetchData(parsed.phone);
+        const saved = localStorage.getItem('user_phone');
+        if (saved) {
+            setPhone(saved);
+            fetchData(saved);
         }
     }, []);
 
@@ -47,59 +42,22 @@ export default function AccountPage() {
         }
     };
 
-    const handleAuth = async (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
+        if (!tempPhone) return;
+
         setLoading(true);
-
-        // Normalize phone
-        const cleanPhone = formData.phone.replace(/\D/g, '');
-
-        if (cleanPhone.length < 10) {
-            toast.error('Telefone inválido');
-            setLoading(false);
-            return;
-        }
-
-        try {
-            let res;
-            if (authMode === 'register') {
-                res = await registerCustomer(cleanPhone, formData.password, formData.name);
-                if (res.success) {
-                    toast.success('Conta criada! Faça login.');
-                    setAuthMode('login');
-                    setLoading(false);
-                    return;
-                }
-            } else {
-                res = await loginCustomer(cleanPhone, formData.password);
-                if (res.success) {
-                    const userData = { phone: res.user.phone, name: res.user.name };
-                    localStorage.setItem('user_data', JSON.stringify(userData));
-                    // Check for old simple auth and clear it
-                    localStorage.removeItem('user_phone');
-
-                    setUser(userData);
-                    await fetchData(res.user.phone);
-                    toast.success(`Bem-vindo, ${res.user.name || 'Cliente'}!`);
-                }
-            }
-
-            if (!res.success) {
-                toast.error(res.error);
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error('Erro de conexão.');
-        } finally {
-            setLoading(false);
-        }
+        // Simulate "login" or validation could go here
+        localStorage.setItem('user_phone', tempPhone);
+        setPhone(tempPhone);
+        await fetchData(tempPhone);
+        setLoading(false);
     };
 
     const handleLogout = () => {
         if (confirm('Deseja realmente sair?')) {
-            localStorage.removeItem('user_data');
-            localStorage.removeItem('user_phone'); // Cleanup legacy
-            setUser(null);
+            localStorage.removeItem('user_phone');
+            setPhone('');
             setOrders([]);
             setFavorites([]);
         }
@@ -139,72 +97,33 @@ export default function AccountPage() {
 
             <main className="container pt-6 px-4">
 
-                {/* AUTH STATE */}
-                {!user ? (
-                    <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-sm mt-10">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-[var(--primary)] text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-lime-500/20">
-                                <Lock size={32} />
-                            </div>
-                            <h2 className="text-2xl font-bold text-gray-900">
-                                {authMode === 'login' ? 'Acesse sua Conta' : 'Crie sua Conta'}
-                            </h2>
-                            <p className="text-gray-500 text-sm mt-2">
-                                {authMode === 'login'
-                                    ? 'Digite seu WhatsApp e senha para entrar.'
-                                    : 'Preencha seus dados para ter acesso exclusivo.'}
-                            </p>
+                {/* LOGIN STATE */}
+                {!phone ? (
+                    <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-sm text-center mt-10">
+                        <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <User size={32} />
                         </div>
-
-                        <form onSubmit={handleAuth} className="flex flex-col gap-4">
-                            {authMode === 'register' && (
-                                <input
-                                    type="text"
-                                    placeholder="Seu Nome"
-                                    className="p-4 border border-gray-200 rounded-xl outline-none focus:border-[var(--primary)] transition-colors"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
-                            )}
-
+                        <h2 className="text-xl font-bold mb-2">Área do Cliente</h2>
+                        <p className="text-gray-500 mb-6 text-sm">
+                            Digite seu WhatsApp para acessar seus pedidos e favoritos.
+                        </p>
+                        <form onSubmit={handleLogin} className="flex flex-col gap-3">
                             <input
                                 type="tel"
-                                placeholder="WhatsApp (DDD + Número)"
-                                className="p-4 border border-gray-200 rounded-xl outline-none focus:border-[var(--primary)] transition-colors"
-                                value={formData.phone}
-                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                placeholder="Seu WhatsApp (apenas números)"
+                                className="p-4 border border-gray-200 rounded-xl text-center text-lg font-medium outline-none focus:border-green-500 transition-colors"
+                                value={tempPhone}
+                                onChange={e => setTempPhone(e.target.value.replace(/\D/g, ''))}
                                 required
                             />
-
-                            <input
-                                type="password"
-                                placeholder="Sua Senha"
-                                className="p-4 border border-gray-200 rounded-xl outline-none focus:border-[var(--primary)] transition-colors"
-                                value={formData.password}
-                                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                required
-                            />
-
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="bg-[var(--primary)] text-black font-bold py-4 rounded-xl hover:bg-[#b3e600] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-lime-500/20 mt-2"
+                                disabled={loading || !tempPhone}
+                                className="bg-[var(--primary)] text-black font-bold py-4 rounded-xl hover:bg-[#b3e600] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-lime-500/20"
                             >
-                                {loading ? <Loader2 className="animate-spin" /> : (authMode === 'login' ? 'Entrar' : 'Cadastrar')}
+                                {loading ? <Loader2 className="animate-spin" /> : <>Acessar <ArrowRight size={20} /></>}
                             </button>
                         </form>
-
-                        <div className="mt-6 text-center">
-                            <button
-                                onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                                className="text-sm text-gray-600 hover:text-[var(--primary-dim)] font-medium underline"
-                            >
-                                {authMode === 'login'
-                                    ? 'Ainda não tem conta? Cadastre-se'
-                                    : 'Já tem conta? Faça login'}
-                            </button>
-                        </div>
                     </div>
                 ) : (
                     // LOGGED IN STATE
@@ -215,7 +134,7 @@ export default function AccountPage() {
                                 <h1 className="text-2xl font-bold text-gray-900">Minha Conta</h1>
                                 <p className="text-sm text-gray-500 flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                    {user.name || user.phone}
+                                    {phone}
                                 </p>
                             </div>
                             <button onClick={handleLogout} className="text-red-500 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors">
@@ -245,6 +164,7 @@ export default function AccountPage() {
                             </button>
                         </div>
 
+                        {/* Content */}
                         {dataLoading ? (
                             <div className="text-center py-20">
                                 <Loader2 className="animate-spin mx-auto text-gray-400" size={32} />

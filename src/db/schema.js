@@ -85,13 +85,6 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     })
 }));
 
-export const favorites = sqliteTable('favorites', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    userPhone: text('user_phone').notNull(),
-    productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
-    createdAt: text('created_at').default(new Date().toISOString()),
-});
-
 export const restockSubscriptions = sqliteTable('restock_subscriptions', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
