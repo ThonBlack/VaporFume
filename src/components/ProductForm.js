@@ -145,19 +145,25 @@ export default function ProductForm({ action, initialData = null, availableProdu
                         <div style={{ marginBottom: '20px' }}>
                             <label className="label">Etiqueta de Destaque</label>
                             <div className="flex gap-2">
-                                <select
+                                <input
+                                    list="badge-options"
                                     name="badge"
                                     className="admin-input"
+                                    placeholder="Selecione ou digite..."
                                     defaultValue={initialData?.badge || ''}
-                                >
-                                    <option value="">Nenhuma</option>
+                                />
+                                <datalist id="badge-options">
                                     <option value="Novidade">✨ Novidade</option>
                                     <option value="Promoção">🔥 Promoção</option>
                                     <option value="Mais Vendido">🏆 Mais Vendido</option>
                                     <option value="Lançamento">🚀 Lançamento</option>
                                     <option value="Poucas Unidades">⚠️ Poucas Unidades</option>
-                                </select>
+                                    <option value="Exclusivo">💎 Exclusivo</option>
+                                </datalist>
                             </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Dica: Digite "Novidade" ou "Lançamento" para aparecer na vitrine de cima.
+                            </p>
                         </div>
 
                         {/* Product Type Toggle */}

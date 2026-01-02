@@ -67,12 +67,6 @@ export default function HomeClient({ products, categories }) {
                     </span>
                 </div>
 
-                <CategoryFilter
-                    categories={categories}
-                    activeCategory={activeCategory}
-                    onSelect={setActiveCategory}
-                />
-
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
