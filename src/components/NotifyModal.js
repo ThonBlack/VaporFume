@@ -15,7 +15,7 @@ export default function NotifyModal({ isOpen, onClose, product, variant, mode = 
     const isFavorite = mode === 'favorite';
     const title = isFavorite ? 'Salvar nos Favoritos' : 'Avise-me quando chegar';
     const message = isFavorite
-        ? `Receba avisos quando o preço de ${product.name} baixar!`
+        ? `Salve este produto na sua lista VIP! 💎\nVocê garante prioridade em Ofertas Relâmpago e Avisos de Reposição.`
         : `O produto ${product.name} - ${variant} está esgotado. Preencha abaixo para receber um alerta.`;
 
     const handleSubmit = async (e) => {
