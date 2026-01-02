@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, Bell, Loader2, Heart } from 'lucide-react';
-import { saveRestockSubscription } from '@/app/actions/marketing'; // We will create this action
+import { saveRestockSubscription, saveFavorite } from '@/app/actions/marketing';
 
 export default function NotifyModal({ isOpen, onClose, product, variant, mode = 'restock' }) {
     const [email, setEmail] = useState('');

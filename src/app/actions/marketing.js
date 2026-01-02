@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders } from '@/db/schema';
-import { desc, isNotNull } from 'drizzle-orm';
+import { orders, restockSubscriptions, favorites } from '@/db/schema';
+import { desc, isNotNull, and, eq } from 'drizzle-orm';
 
 export async function getCustomersForMarketing() {
     // Fetch unique customers who have a phone number
