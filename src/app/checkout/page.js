@@ -152,7 +152,6 @@ export default function CheckoutPage() {
                 total: cartTotal + shippingCost,
                 paymentMethod: paymentMethod,
                 customerPhone: formData.phone,
-                customerPhone: formData.phone,
                 customerAddress: `${formData.address}, ${formData.number} - ${formData.neighborhood}`, // Combine
                 customerCity: formData.city,
                 customerState: formData.state,
