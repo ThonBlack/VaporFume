@@ -53,18 +53,11 @@ export default function AutomationsPage() {
                     </p>
 
                     {data.status !== 'connected' && data.qr && (
-                        <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-200">
-                            {/* Use an img tag with a QR API if lib issues, but let's try a simple SVG renderer component if available. 
-                               Actually, since I might not have react-qr-code installed in package.json yet, 
-                               I will use a reliable public API for the prototype to avoid build fail, 
-                               OR just text. 
-                               Better: I will add `react-qr-code` to dependencies in the next step.
-                           */}
-                            {/* Placeholder for QR Component */}
-                            <div className="w-48 h-48 bg-gray-100 flex items-center justify-center text-xs break-all overflow-hidden p-2">
-                                QR RAW: {data.qr.substring(0, 20)}...
-                            </div>
-                            <p className="text-xs text-gray-400 mt-2">Instale 'react-qr-code' para ver a imagem</p>
+                        <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-200 flex flex-col items-center">
+                            <QRCode value={data.qr} size={192} />
+                            <p className="text-xs text-center text-gray-400 mt-4 break-all max-w-[200px]">
+                                {data.qr.substring(0, 15)}...
+                            </p>
                         </div>
                     )}
                 </div>
