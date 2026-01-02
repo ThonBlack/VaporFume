@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/db/db';
+import { db } from '@/lib/db';
 import { messageQueue } from '@/db/schema';
 import { sql, eq, and, lte } from 'drizzle-orm';
 
@@ -24,8 +23,7 @@ export async function GET() {
                     lte(messageQueue.scheduledAt, now)
                 )
             )
-            .limit(10) // Process in batches to avoid timeout
-            .all();
+            .limit(10); // Process in batches to avoid timeout
 
         if (pending.length === 0) {
             return NextResponse.json({ success: true, processed: 0, message: 'No pending messages' });
