@@ -180,8 +180,6 @@ export async function createProduct(formData) {
     redirect('/admin/products');
 }
 
-import { products, categories, variants, orderItems } from '../db/schema'; // Updated import
-
 // ... (code omitted for brevity)
 
 export async function deleteProduct(formData) {
