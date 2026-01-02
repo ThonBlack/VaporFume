@@ -10,6 +10,12 @@ export default function NotifyModal({ isOpen, onClose, product, variant, mode = 
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
+    // Load phone from storage
+    if (isOpen && !phone && typeof window !== 'undefined') {
+        const saved = localStorage.getItem('user_phone');
+        if (saved) setPhone(saved);
+    }
+
     if (!isOpen) return null;
 
     const isFavorite = mode === 'favorite';
@@ -23,6 +29,9 @@ export default function NotifyModal({ isOpen, onClose, product, variant, mode = 
         setLoading(true);
 
         try {
+            // Save for next time
+            if (typeof window !== 'undefined') localStorage.setItem('user_phone', phone);
+
             // Simulate action for now, or call the real one if we had it ready
             // await saveRestockSubscription({ productId: product.id, variantName: variant, email, phone });
 
