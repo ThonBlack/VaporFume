@@ -22,6 +22,44 @@ export default function HomeClient({ products, categories }) {
 
             <BannerCarousel />
 
+            <div className="container py-6">
+                <div style={{ overflowX: 'auto', paddingBottom: '10px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={() => setActiveCategory('all')}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                backgroundColor: activeCategory === 'all' ? 'var(--primary)' : '#f0f0f0',
+                                color: activeCategory === 'all' ? '#fff' : '#333',
+                                border: 'none',
+                                whiteSpace: 'nowrap',
+                                fontWeight: 500
+                            }}
+                        >
+                            Todos
+                        </button>
+                        {categories.map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setActiveCategory(cat.id)}
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '20px',
+                                    backgroundColor: activeCategory === cat.id ? 'var(--primary)' : '#f0f0f0',
+                                    color: activeCategory === cat.id ? '#fff' : '#333',
+                                    border: 'none',
+                                    whiteSpace: 'nowrap',
+                                    fontWeight: 500
+                                }}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
             <main className="container pb-20" id="catalog">
 
                 {/* Section: Novidades */}
