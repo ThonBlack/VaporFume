@@ -58,7 +58,7 @@ export async function GET() {
 
         // MOCKING DATA for demonstration if no orders exist
         // Insert a test message if queue is empty
-        const queueCheck = await db.select().from(messageQueue).limit(1).all();
+        const queueCheck = await db.select().from(messageQueue).limit(1);
         if (queueCheck.length === 0) {
             // Scheduler: 9am to 17pm (5pm)
             const scheduleTime = getRandomTimeToday(9, 17);

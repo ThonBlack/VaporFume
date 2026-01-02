@@ -113,7 +113,4 @@ export const messageQueue = sqliteTable('message_queue', {
     createdAt: integer('created_at').default((Date.now() / 1000)),
 });
 
-export const settings = sqliteTable('settings', {
-    key: text('key').primaryKey(),
-    value: text('value')
-});
+
