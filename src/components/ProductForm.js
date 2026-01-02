@@ -142,6 +142,24 @@ export default function ProductForm({ action, initialData = null, availableProdu
                             </select>
                         </div>
 
+                        <div style={{ marginBottom: '20px' }}>
+                            <label className="label">Etiqueta de Destaque</label>
+                            <div className="flex gap-2">
+                                <select
+                                    name="badge"
+                                    className="admin-input"
+                                    defaultValue={initialData?.badge || ''}
+                                >
+                                    <option value="">Nenhuma</option>
+                                    <option value="Novidade">✨ Novidade</option>
+                                    <option value="Promoção">🔥 Promoção</option>
+                                    <option value="Mais Vendido">🏆 Mais Vendido</option>
+                                    <option value="Lançamento">🚀 Lançamento</option>
+                                    <option value="Poucas Unidades">⚠️ Poucas Unidades</option>
+                                </select>
+                            </div>
+                        </div>
+
                         {/* Product Type Toggle */}
                         <div style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                             <label className="label" style={{ marginBottom: '12px' }}>Tipo de Produto</label>

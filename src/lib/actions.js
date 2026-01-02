@@ -150,7 +150,7 @@ export async function createProduct(formData) {
             image: mainImage,
             images: JSON.stringify(savedImages), // Save all images
             rating: 5.0,
-            badge: 'Novo',
+            badge: formData.get('badge') || null,
             categoryId,
             linkedProductId,
             bundleSize
@@ -352,6 +352,7 @@ export async function updateProduct(formData) {
             linkedProductId,
             bundleSize,
             image: mainImage,
+            badge: formData.get('badge') || null,
             images: JSON.stringify(finalImages)
         };
 
