@@ -182,8 +182,8 @@ export async function createProduct(formData) {
 
 // ... (code omitted for brevity)
 
-export async function deleteProduct(formData) {
-    const id = formData.get('id');
+export async function deleteProduct(entry) {
+    const id = entry instanceof FormData ? entry.get('id') : entry;
 
     try {
         // 1. Detach from Order Items (Preserve History)
