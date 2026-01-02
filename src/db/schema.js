@@ -113,4 +113,12 @@ export const messageQueue = sqliteTable('message_queue', {
     createdAt: integer('created_at').default((Date.now() / 1000)),
 });
 
+export const customers = sqliteTable('customers', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    phone: text('phone').notNull().unique(),
+    password: text('password').notNull(),
+    name: text('name'),
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
+
 
