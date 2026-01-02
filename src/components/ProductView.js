@@ -70,25 +70,30 @@ export default function ProductView({ product }) {
         }
     };
 
+    // Toast State
+    const [showToast, setShowToast] = useState(false);
+
     const handleBuy = () => {
-        // Here we would add to cart context or redirect to checkout
-        // For simplicity, just alert for now or mock
         const payload = {
             productId: product.id,
             productName: product.name,
             price: product.price,
             variants: selectedFlavors,
             isKit: isKit,
-            image: activeImage // Add image to cart
+            image: activeImage
         };
-        console.log('Adding to cart:', payload);
-        // Assuming we use localStorage or global state. 
-        // For this task, we assume "Comprar" goes to checkout or adds to cart.
-        // Let's implement a quick localStorage cart add + redirect 
+
+        // Add to LocalStorage
         const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        cart.push({ ...payload, quantity: 1, id: Date.now() }); // Simple ID
+        cart.push({ ...payload, quantity: 1, uniqueId: Date.now() });
         localStorage.setItem('cart', JSON.stringify(cart));
-        window.location.href = '/checkout';
+
+        // Dispatch Event for Header updates
+        window.dispatchEvent(new Event('cart-updated'));
+
+        // Show Feedback
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
     };
 
     // Images Logic
@@ -107,6 +112,29 @@ export default function ProductView({ product }) {
     return (
         <div style={{ minHeight: '100vh', background: 'var(--background)', paddingBottom: '40px' }}>
             <Header />
+
+            {/* Toast Notification */}
+            {showToast && (
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-4 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-4 flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-black">
+                        <Truck size={16} />
+                    </div>
+                    <div>
+                        <p className="font-bold text-sm">Produto adicionado!</p>
+                        <p className="text-xs text-gray-400">O que deseja fazer?</p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                        <button onClick={() => setShowToast(false)} className="px-3 py-1 text-xs border border-gray-600 rounded-lg hover:bg-gray-800">
+                            Continuar
+                        </button>
+                        <Link href="/cart">
+                            <button className="px-3 py-1 text-xs bg-white text-black font-bold rounded-lg hover:bg-gray-200">
+                                Ver Carrinho
+                            </button>
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             <main className="container" style={{ marginTop: '100px' }}>
                 <div style={{ marginBottom: '24px' }}>
