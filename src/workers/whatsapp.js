@@ -35,14 +35,25 @@ function updateMessageStatus(id, status) {
     stmt.run(status, status === 'sent' ? now : null, id);
 }
 
+import path from 'path';
+
+// ... other imports
+
 async function startSock() {
-    const { state, saveCreds } = await useMultiFileAuthState('wa_auth_credentials');
+    // Force absolute path for stability
+    const authPath = path.resolve('/root/VaporFume/wa_auth_credentials');
+    const { state, saveCreds } = await useMultiFileAuthState(authPath);
 
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: true, // Useful for debug logs
+        printQRInTerminal: true,
         auth: state,
-        browser: ["Vapor Fume", "Chrome", "1.0"] // Custom User Agent
+        browser: ["Vapor Fume", "Chrome", "1.0"],
+        connectTimeoutMs: 60000, // Increase timeout
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 10000,
+        emitOwnEvents: true,
+        retryRequestDelayMs: 250,
     });
 
     sock.ev.on('connection.update', (update) => {
