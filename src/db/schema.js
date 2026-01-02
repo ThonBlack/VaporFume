@@ -84,3 +84,31 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
         references: [products.id]
     })
 }));
+
+export const favorites = sqliteTable('favorites', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userPhone: text('user_phone').notNull(),
+    productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
+
+export const restockSubscriptions = sqliteTable('restock_subscriptions', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
+    variantName: text('variant_name'),
+    contactEmail: text('contact_email'),
+    contactPhone: text('contact_phone'),
+    notified: integer('notified').default(0),
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
+
+export const messageQueue = sqliteTable('message_queue', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    phone: text('phone').notNull(),
+    content: text('content').notNull(),
+    type: text('type').default('winback'),
+    status: text('status').default('pending'),
+    scheduledAt: integer('scheduled_at').notNull(),
+    sentAt: integer('sent_at'),
+    createdAt: integer('created_at').default((Date.now() / 1000)),
+});
