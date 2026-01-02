@@ -1,32 +1,57 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders } from '@/db/schema';
-import { like, desc } from 'drizzle-orm';
+import { customers } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
 
-export async function getMyOrders(phoneRaw) {
-    if (!phoneRaw) return { success: false, message: 'Digite seu telefone' };
+/**
+ * Register a new customer
+ */
+export async function registerCustomer(phone, password, name) {
+    // 1. Check if exists
+    const existing = await db.select().from(customers).where(eq(customers.phone, phone));
+    if (existing.length > 0) {
+        return { success: false, error: 'Telefone já cadastrado.' };
+    }
 
-    // Normalize: Keep only numbers
-    const cleanPhone = phoneRaw.replace(/\D/g, '');
+    // 2. Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (cleanPhone.length < 8) return { success: false, message: 'Telefone inválido' };
-
+    // 3. Insert
     try {
-        // Search strictly by phone containing the numbers (getting last 8 or 9 digits usually safer, but let's try strict contains)
-        // VaporFume usually saves as "5534...", so if user types "349...", a like query works.
-        const results = await db.query.orders.findMany({
-            where: like(orders.customerPhone, `%${cleanPhone}%`),
-            orderBy: [desc(orders.createdAt)],
-            limit: 10,
-            with: {
-                items: true
-            }
+        await db.insert(customers).values({
+            phone,
+            password: hashedPassword,
+            name
         });
-
-        return { success: true, orders: results };
+        return { success: true };
     } catch (error) {
-        console.error('Error fetching my orders:', error);
-        return { success: false, message: 'Erro ao buscar pedidos.' };
+        console.error('Register error:', error);
+        return { success: false, error: 'Erro ao criar conta.' };
+    }
+}
+
+/**
+ * Login customer
+ */
+export async function loginCustomer(phone, password) {
+    try {
+        const user = await db.select().from(customers).where(eq(customers.phone, phone));
+
+        if (user.length === 0) {
+            return { success: false, error: 'Usuário não encontrado.' };
+        }
+
+        const isValid = await bcrypt.compare(password, user[0].password);
+
+        if (!isValid) {
+            return { success: false, error: 'Senha incorreta.' };
+        }
+
+        return { success: true, user: { phone: user[0].phone, name: user[0].name } };
+    } catch (error) {
+        console.error('Login error:', error);
+        return { success: false, error: 'Erro de servidor.' };
     }
 }
