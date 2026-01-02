@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from './db';
-import { products, categories, variants } from '../db/schema';
+import { products, categories, variants, orderItems } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -180,11 +180,24 @@ export async function createProduct(formData) {
     redirect('/admin/products');
 }
 
+import { products, categories, variants, orderItems } from '../db/schema'; // Updated import
+
+// ... (code omitted for brevity)
+
 export async function deleteProduct(formData) {
     const id = formData.get('id');
 
     try {
+        // 1. Detach from Order Items (Preserve History)
+        // We set productId to NULL so the order item remains but is no longer linked to the deleted product
+        await db.update(orderItems)
+            .set({ productId: null })
+            .where(eq(orderItems.productId, parseInt(id)));
+
+        // 2. Delete Product
+        // Variants will be deleted automatically due to onDelete: 'cascade' in schema
         await db.delete(products).where(eq(products.id, parseInt(id)));
+
         revalidatePath('/admin/products');
         revalidatePath('/');
     } catch (error) {
