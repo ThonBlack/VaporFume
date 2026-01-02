@@ -329,29 +329,7 @@ export default function ProductView({ product }) {
                             </button>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-6">
-                            <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
-                                <Truck size={20} /> Calcular Frete
-                            </div>
-                            <div className="flex gap-2 mb-3">
-                                <input
-                                    type="text"
-                                    placeholder="Digite seu CEP"
-                                    value={cep}
-                                    onChange={(e) => setCep(e.target.value)}
-                                    className="flex-1 p-3 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
-                                />
-                                <button onClick={calculateShipping} className="px-6 bg-gray-100 font-semibold rounded-lg hover:bg-gray-200 transition-colors">
-                                    OK
-                                </button>
-                            </div>
-                            {shippingResult && (
-                                <div className="bg-green-50 text-green-800 p-3 rounded-lg text-sm">
-                                    <p className="font-bold">{shippingResult.price === 0 ? 'Frete Grátis 🎉' : `R$ ${shippingResult.price.toFixed(2)}`}</p>
-                                    <p>Prazo: {shippingResult.days}</p>
-                                </div>
-                            )}
-                        </div>
+
                     </div>
                 </div>
             </main>
