@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from './db';
-import { products, categories, variants, orderItems } from '../db/schema';
+import { products, categories, variants, orderItems, favorites, messageQueue, settings } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -379,4 +379,54 @@ export async function updateProduct(formData) {
     }
 
     redirect('/admin/products');
+}
+
+export async function getFavorites(phone) {
+    if (!phone) return [];
+    try {
+        const userFavs = await db.select()
+            .from(favorites)
+            .where(eq(favorites.userPhone, phone));
+
+        if (userFavs.length === 0) return [];
+
+        const productIds = userFavs.map(f => f.productId);
+
+        // Fetch products that match the IDs
+        // Drizzle doesn't have a simple 'inArray' in this version? It usually does `inArray(products.id, productIds)`.
+        // Let's check imports. I need to import `inArray` from drizzle-orm.
+        // If not, I can loop. `inArray` is better.
+        // For now, let's just fetch all and filter or use Promise.all for safety if `inArray` is missing.
+        // Safe approach: Promise.all
+        const favProducts = await Promise.all(productIds.map(async (id) => {
+            const res = await db.select().from(products).where(eq(products.id, id));
+            return res[0];
+        }));
+
+        return favProducts.filter(Boolean);
+    } catch (error) {
+        console.error('Error getting favorites:', error);
+        return [];
+    }
+}
+
+export async function getAutomationData() {
+    try {
+        const queue = await db.select().from(messageQueue).orderBy(desc(messageQueue.createdAt)).limit(20);
+
+        const statusRes = await db.select().from(settings).where(eq(settings.key, 'whatsapp_status'));
+        const qrRes = await db.select().from(settings).where(eq(settings.key, 'whatsapp_qr'));
+
+        const status = statusRes.length > 0 ? statusRes[0].value : 'disconnected';
+        const qr = qrRes.length > 0 ? qrRes[0].value : '';
+
+        return {
+            queue,
+            status,
+            qr
+        };
+    } catch (error) {
+        console.error('Error getting automation data:', error);
+        return { queue: [], status: 'error', qr: null };
+    }
 }
