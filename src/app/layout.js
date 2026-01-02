@@ -14,7 +14,12 @@ const outfit = Outfit({
 export const metadata = {
   title: "Vapor Fumê - Sua loja de Vapes e Pods",
   description: "Encontre os melhores pods, vapes e juices.",
-  manifest: '/manifest.json', // Add manifest here
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/assets/icon-v2.png',
+    shortcut: '/assets/icon-v2.png',
+    apple: '/assets/icon-v2.png',
+  }
 };
 
 export default function RootLayout({ children }) {
