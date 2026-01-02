@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { getProducts, deleteProduct } from '@/lib/actions';
+import { getProducts } from '@/lib/actions';
+import DeleteProductButton from '@/components/DeleteProductButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,14 +68,7 @@ export default async function AdminProducts() {
                                                 </span>
                                             </td>
                                             <td style={{ padding: '16px', textAlign: 'right' }}>
-                                                <form action={async () => {
-                                                    'use server';
-                                                    await deleteProduct(product.id);
-                                                }} style={{ display: 'inline' }}>
-                                                    <button type="submit" style={{ padding: '8px', borderRadius: '8px', border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer', color: '#dc2626' }}>
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </form>
+                                                <DeleteProductButton productId={product.id} productName={product.name} />
                                             </td>
                                         </tr>
                                     );
