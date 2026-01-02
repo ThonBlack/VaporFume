@@ -430,3 +430,27 @@ export async function getAutomationData() {
         return { queue: [], status: 'error', qr: null };
     }
 }
+
+export async function getCustomerOrders(phone) {
+    if (!phone) return [];
+    try {
+        // Normalize phone if needed (remove non-digits)
+        const cleanPhone = phone.replace(/\D/g, '');
+
+        // Fetch orders for this phone, ordered by newest first
+        const userOrders = await db.select().from(orders)
+            .where(eq(orders.customerPhone, cleanPhone))
+            .orderBy(desc(orders.createdAt));
+
+        // Enrich with items? For listing, maybe we just need total/status/date.
+        // If we want items, we can fetch them or leave it for a detail view.
+        // Let's at least get the count of items or the first item name?
+        // For simplicity/performance, let's just return orders first.
+        // Actually, users like to see "Vape X + 2 others".
+
+        return userOrders;
+    } catch (error) {
+        console.error('Error getting customer orders:', error);
+        return [];
+    }
+}
