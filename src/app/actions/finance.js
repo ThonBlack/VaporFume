@@ -23,75 +23,76 @@ export async function getFinancialMetrics(startDate, endDate) {
         .from(orders)
         .where(and(
             gte(orders.createdAt, start),
-            lte(orders.createdAt, end),
-            // Filter out cancelled if you implement that status
-            // ne(orders.status, 'cancelled') 
+            lte(orders.createdAt, end)
         ));
 
-    // 2. Calculate Revenue & Ticket
+    // 2. Calculate Revenue & Ticket & Count
     const revenue = sales.reduce((acc, order) => acc + order.total, 0);
     const count = sales.length;
     const avgTicket = count > 0 ? revenue / count : 0;
 
     // 3. Calculate Profit (Need to join with items)
     // We fetch all items from these orders
-    price: orderItems.price,
+    const items = await db.select({
+        price: orderItems.price,
         cost: orderItems.costPrice,
-            quantity: orderItems.quantity,
-                productName: orderItems.productName,
-                    variantName: orderItems.variantName,
-                        date: orders.createdAt
-})
+        quantity: orderItems.quantity,
+        productName: orderItems.productName,
+        variantName: orderItems.variantName,
+        date: orders.createdAt
+    })
         .from(orderItems)
-    .leftJoin(orders, eq(orderItems.orderId, orders.id))
-    .where(and(
-        gte(orders.createdAt, start),
-        lte(orders.createdAt, end)
-    ));
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(
+            gte(orders.createdAt, start),
+            lte(orders.createdAt, end)
+        ));
 
-let totalCost = 0;
-items.forEach(item => {
-    totalCost += (item.cost || 0) * item.quantity;
-});
+    let totalCost = 0;
+    items.forEach(item => {
+        totalCost += (item.cost || 0) * item.quantity;
+    });
 
-const profit = revenue - totalCost;
-const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const profit = revenue - totalCost;
+    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-// 4. Daily aggregations for Chart
-const dailyData = {};
-sales.forEach(order => {
-    const day = order.date.split('T')[0]; // YYYY-MM-DD
-    if (!dailyData[day]) dailyData[day] = { date: day, revenue: 0, orders: 0 };
-    dailyData[day].revenue += order.total;
-    dailyData[day].orders += 1;
-});
+    // 4. Daily aggregations for Chart
+    const dailyData = {};
+    sales.forEach(order => {
+        const day = order.date.split('T')[0]; // YYYY-MM-DD
+        if (!dailyData[day]) dailyData[day] = { date: day, revenue: 0, orders: 0 };
+        dailyData[day].revenue += order.total;
+        dailyData[day].orders += 1;
+    });
 
-// 5. Product Performance
-const productStats = {};
-items.forEach(item => {
-    const key = item.productName || 'Desconhecido';
-    if (!productStats[key]) {
-        productStats[key] = { name: key, revenue: 0, quantity: 0, profit: 0 };
-    }
-    productStats[key].revenue += (item.price * item.quantity);
-    productStats[key].quantity += item.quantity;
-    productStats[key].profit += ((item.price - (item.cost || 0)) * item.quantity);
-});
+    // 5. Product Performance
+    const productStats = {};
+    items.forEach(item => {
+        let key = item.productName || 'Produto Desconhecido';
+        if (item.variantName) key += ` (${item.variantName})`;
 
-const topProducts = Object.values(productStats)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5); // Top 5
+        if (!productStats[key]) {
+            productStats[key] = { name: key, revenue: 0, quantity: 0, profit: 0 };
+        }
+        productStats[key].revenue += (item.price * item.quantity);
+        productStats[key].quantity += item.quantity;
+        productStats[key].profit += ((item.price - (item.cost || 0)) * item.quantity);
+    });
 
-// Fill missing days if needed, but for now return dense data
-const chartData = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+    const topProducts = Object.values(productStats)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5); // Top 5
 
-return {
-    revenue,
-    profit,
-    margin,
-    count,
-    avgTicket,
-    chartData,
-    topProducts
-};
+    // Fill missing days if needed, but for now return dense data
+    const chartData = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+        revenue,
+        profit,
+        margin,
+        count,
+        avgTicket,
+        chartData,
+        topProducts
+    };
 }
