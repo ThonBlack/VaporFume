@@ -3,6 +3,7 @@ import OrderStatusSelector from '@/components/OrderStatusSelector';
 import Link from 'next/link';
 import { ArrowLeft, MessageCircle, Printer, XCircle, Instagram, CheckCircle2 } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import FinalizeOrderButton from '@/components/FinalizeOrderButton';
 
 export default async function OrderDetailsPage({ params }) {
     const { id } = await params;
@@ -135,16 +136,9 @@ export default async function OrderDetailsPage({ params }) {
                     </Link>
 
                     {/* Finalize Button */}
-                    <form action={async () => {
-                        'use server';
-                        const { updateOrderStatus } = require('@/app/actions/orders');
-                        await updateOrderStatus(order.id, 'completed');
-                    }}>
-                        <button className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition-colors shadow-md mt-4">
-                            <CheckCircle2 className="w-5 h-5" />
-                            Finalizar (Pago e Entregue)
-                        </button>
-                    </form>
+                    {order.status !== 'completed' && (
+                        <FinalizeOrderButton orderId={order.id} />
+                    )}
 
                     <button className="flex items-center justify-center gap-2 w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-lg transition-colors border border-red-100">
                         <XCircle className="w-4 h-4" />

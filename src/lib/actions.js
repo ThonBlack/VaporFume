@@ -356,16 +356,50 @@ export async function updateProduct(formData) {
 
                             console.log(`[Restock] Found ${subs.length} subscribers`);
 
+                            // Helper to get random time between start and end (timestamps in seconds)
+                            const getRandomTime = (start, end) => Math.floor(Math.random() * (end - start + 1) + start);
+
+                            // Helper to get next business window
+                            const getNextBusinessWindow = () => {
+                                const now = new Date();
+                                const start = new Date(now);
+                                start.setHours(9, 0, 0, 0);
+                                const end = new Date(now);
+                                end.setHours(17, 0, 0, 0);
+
+                                // If now is after 17:00, move to tomorrow
+                                if (now > end) {
+                                    start.setDate(start.getDate() + 1);
+                                    end.setDate(end.getDate() + 1);
+                                }
+                                // If now is before 09:00, use today's window (start is already set)
+
+                                return { start: Math.floor(start.getTime() / 1000), end: Math.floor(end.getTime() / 1000) };
+                            };
+
+                            const window = getNextBusinessWindow();
+                            // If currently inside window, distribution starts from now
+                            const nowSec = Math.floor(Date.now() / 1000);
+                            const distributionStart = Math.max(window.start, nowSec);
+                            const distributionEnd = window.end;
+
                             for (const sub of subs) {
                                 if (sub.contactPhone) {
                                     const message = `Olá! O produto *${name} (${v.name})* que você estava esperando chegou na Vapor Fumê! 💨\n\nGaranta o seu agora: https://vaporfume.shop/product/${updateData.slug || id}`;
+
+                                    // Schedule randomly within the window
+                                    // Ensure clean distribution if window is valid, otherwise fallback to delayed
+                                    let scheduledAt = nowSec + 60; // default 1 min
+                                    if (distributionEnd > distributionStart) {
+                                        scheduledAt = getRandomTime(distributionStart, distributionEnd);
+                                    }
 
                                     await db.insert(messageQueue).values({
                                         phone: sub.contactPhone,
                                         content: message,
                                         type: 'restock_alert',
                                         status: 'pending',
-                                        scheduledAt: Math.floor(Date.now() / 1000)
+                                        scheduledAt: scheduledAt
                                     });
 
                                     // Mark as notified
