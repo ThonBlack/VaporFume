@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from './db';
-import { products, categories, variants, orderItems, favorites, messageQueue, settings } from '../db/schema';
+import { products, categories, variants, orderItems, favorites, messageQueue, settings, restockSubscriptions } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';

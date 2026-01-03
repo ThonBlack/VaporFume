@@ -26,56 +26,55 @@ export async function submitPosOrder(data) {
         const orderId = orderResult[0].id;
 
         if (data.items && data.items.length > 0) {
-            const itemsToInsert = data.items.map(item => ({
-                orderId,
-                productId: item.productId,
-                productName: item.productName,
-                variantName: item.variantName || (item.variants && item.variants.join(', ')), // Handle variants
-                quantity: item.quantity,
-                price: item.price
-            }));
+            // 1. Prepare items with Cost Price (Fetch needed)
+            const itemsToInsert = [];
+
+            for (const item of data.items) {
+                // Fetch product for Cost Price & Variant Stock Logic
+                const productRes = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+                const product = productRes[0];
+
+                // Fallback cost
+                const costPrice = product ? (product.costPrice || 0) : 0;
+
+                // Handle Variant Name (Client sends 'variant' or 'variantName')
+                const variantName = item.variantName || item.variant || (item.variants && item.variants.join(', '));
+
+                itemsToInsert.push({
+                    orderId,
+                    productId: item.productId,
+                    productName: item.productName,
+                    variantName: variantName,
+                    quantity: item.quantity,
+                    price: item.price,
+                    costPrice: costPrice // SAVE COST PRICE
+                });
+            }
 
             await db.insert(orderItems).values(itemsToInsert);
 
-            // Decrement Stock Logic (Copied from orders.js)
-            for (const item of data.items) {
+            // 2. Decrement Stock
+            for (const item of itemsToInsert) { // Use the pre-processed items
+                if (!item.productId) continue;
+
                 const productRes = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
                 const product = productRes[0];
                 if (!product) continue;
 
                 const targetProductId = product.linkedProductId || product.id;
 
-                // Case A: Multi-variant (Kit) - Not typical for POS but handled
-                if (item.variants && Array.isArray(item.variants)) {
-                    for (const flavorName of item.variants) {
-                        const variant = await db.query.variants.findFirst({
-                            where: (fields, { and, eq }) => and(eq(fields.productId, targetProductId), eq(fields.name, flavorName))
-                        });
-                        if (variant) {
-                            await db.update(variants).set({ stock: Math.max(0, variant.stock - 1) }).where(eq(variants.id, variant.id));
-                        }
+                if (item.variantName) {
+                    const variant = await db.query.variants.findFirst({
+                        where: (fields, { and, eq }) => and(eq(fields.productId, targetProductId), eq(fields.name, item.variantName))
+                    });
+
+                    if (variant) {
+                        const newStock = Math.max(0, variant.stock - item.quantity);
+                        await db.update(variants).set({ stock: newStock }).where(eq(variants.id, variant.id));
                     }
-                }
-                // Case B: Single variant (Normal)
-                else {
-                    // Logic simplification: Just find the variant. POS items usually have variant info or are simple.
-                    // If item has variantName? 
-                    // The PosCart sends: { productName, productId, quantity, price }. It seems it doesn't send variantName explicitly in the 'items' map in PosPageClient line 53 unless it's on item object.
-                    // Checking PosCart: it maps cart items. PosPageClient addToCart preserves object structure.
-
-                    // Original orders.js had complex logic. I will simplify to: If linkedProductId, decrement its variant. Else decrement main product variant?
-
-                    // Let's reuse the EXACT logic from orders.js to be safe.
-
-                    // Re-reading logic from orders.js (Memory):
-                    // It checks item.variants (array) OR item.variantName OR fallback.
-
-                    // We need to ensure passed data has structure.
-                    // PosPageClient at line 54 maps: item.name, item.id, item.quantity, item.price.
-                    // IT DOES NOT PASS VARIANT INFO! This might be a bug in POS Logic itself (stock not decrementing correctly for variants).
-                    // BUT, fixing the CRASH is priority.
-                    // For now, I will include the stock logic as is, it simply won't trigger for variants if data is missing, but won't crash.
-
+                } else {
+                    // Fallback: If no variant name, try to find ANY variant for this product if it has only one?
+                    // Or just skip if it's a variant-based product but no variant selected (shouldn't happen in valid POS flow)
                     const variant = await db.query.variants.findFirst({
                         where: (fields, { eq }) => eq(fields.productId, targetProductId)
                     });

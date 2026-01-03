@@ -22,23 +22,27 @@ export async function getDashboardStats() {
     const productCount = allProducts.length;
 
     // 4. Profit Calculation (Revenue - Cost of Goods Sold)
-    // We need to look at items of paid orders to calculate total cost
+    const paidOrderIds = paidOrders.map(o => o.id);
     let totalCost = 0;
 
-    // This can be heavy, optimizing:
-    // Get all items from paid orders
-    if (paidOrders.length > 0) {
-        const paidOrderIds = paidOrders.map(o => o.id);
+    if (paidOrderIds.length > 0) {
+        // Fetch items from paid orders
+        // Use historical costPrice if available (preferred), else fallback to current product costPrice
         const items = await db.select({
             quantity: orderItems.quantity,
-            costPrice: products.costPrice
+            historicalCost: orderItems.costPrice,
+            currentCost: products.costPrice
         })
             .from(orderItems)
             .leftJoin(products, eq(orderItems.productId, products.id))
             .where(inArray(orderItems.orderId, paidOrderIds));
 
         totalCost = items.reduce((acc, item) => {
-            const cost = item.costPrice || 0;
+            // Prefer historical cost, fallback to current cost, default to 0
+            const cost = (item.historicalCost !== null && item.historicalCost !== undefined)
+                ? item.historicalCost
+                : (item.currentCost || 0);
+
             return acc + (item.quantity * cost);
         }, 0);
     }
