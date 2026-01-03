@@ -65,6 +65,22 @@ export async function getFinancialMetrics(startDate, endDate) {
         dailyData[day].orders += 1;
     });
 
+    // 5. Product Performance
+    const productStats = {};
+    items.forEach(item => {
+        const key = item.productName || 'Desconhecido';
+        if (!productStats[key]) {
+            productStats[key] = { name: key, revenue: 0, quantity: 0, profit: 0 };
+        }
+        productStats[key].revenue += (item.price * item.quantity);
+        productStats[key].quantity += item.quantity;
+        productStats[key].profit += ((item.price - (item.cost || 0)) * item.quantity);
+    });
+
+    const topProducts = Object.values(productStats)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5); // Top 5
+
     // Fill missing days if needed, but for now return dense data
     const chartData = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
 
@@ -74,6 +90,7 @@ export async function getFinancialMetrics(startDate, endDate) {
         margin,
         count,
         avgTicket,
-        chartData
+        chartData,
+        topProducts
     };
 }

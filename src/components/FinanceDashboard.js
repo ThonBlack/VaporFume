@@ -13,7 +13,8 @@ export default function FinanceDashboard() {
         margin: 0,
         count: 0,
         avgTicket: 0,
-        chartData: []
+        chartData: [],
+        topProducts: []
     });
     const [loading, setLoading] = useState(true);
 
@@ -161,6 +162,37 @@ export default function FinanceDashboard() {
                                     )
                                 })
                             )}
+                        </div>
+                    </div>
+
+                    {/* Top Products */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">🏆 Campeões de Vendas</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                                    <tr>
+                                        <th className="p-3">Produto</th>
+                                        <th className="p-3 text-right">Qtd.</th>
+                                        <th className="p-3 text-right">Faturamento</th>
+                                        <th className="p-3 text-right hidden sm:table-cell">Lucro</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 text-sm">
+                                    {stats.topProducts.length === 0 ? (
+                                        <tr><td colSpan="4" className="p-4 text-center text-gray-400">Sem vendas no período</td></tr>
+                                    ) : (
+                                        stats.topProducts.map((p, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="p-3 font-medium text-gray-900">{idx + 1}. {p.name}</td>
+                                                <td className="p-3 text-right text-gray-600">{p.quantity}</td>
+                                                <td className="p-3 text-right font-bold text-gray-900">{formatMoney(p.revenue)}</td>
+                                                <td className="p-3 text-right text-green-600 hidden sm:table-cell">{formatMoney(p.profit)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
