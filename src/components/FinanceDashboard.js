@@ -7,7 +7,14 @@ import { Loader2, Calendar, DollarSign, TrendingUp, ShoppingBag, CreditCard } fr
 export default function FinanceDashboard() {
     // Default to "Last 30 Days"
     const [dateRange, setDateRange] = useState('30d');
-    const [stats, setStats] = useState(null);
+    const [stats, setStats] = useState({
+        revenue: 0,
+        profit: 0,
+        margin: 0,
+        count: 0,
+        avgTicket: 0,
+        chartData: []
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -21,7 +28,8 @@ export default function FinanceDashboard() {
             const data = await getFinancialMetrics(range.start, range.end);
             setStats(data);
         } catch (error) {
-            console.error(error);
+            console.error("Dashboard Load Error:", error);
+            // Keep zero state on error, maybe toast?
         } finally {
             setLoading(false);
         }
@@ -84,7 +92,7 @@ export default function FinanceDashboard() {
                 <div className="h-64 flex items-center justify-center">
                     <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                 </div>
-            ) : stats && (
+            ) : (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                     {/* KPI Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
