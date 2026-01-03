@@ -128,20 +128,23 @@ export default async function OrderDetailsPage({ params }) {
                     <Link
                         href={`/admin/orders/${order.id}/print`}
                         target="_blank"
-                        className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors shadow-sm"
+                        className="flex items-center justify-center gap-2 w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-lg transition-colors shadow-sm border border-gray-200"
                     >
                         <Printer className="w-4 h-4" />
-                        Imprimir Comprovante
+                        Imprimir Cupom
                     </Link>
 
-                    <Link
-                        href={`/admin/orders/${order.id}/label`}
-                        target="_blank"
-                        className="flex items-center justify-center gap-2 w-full bg-black hover:bg-gray-800 text-white font-medium py-3 rounded-lg transition-colors shadow-sm border border-gray-800"
-                    >
-                        <Printer className="w-4 h-4" />
-                        Imprimir Etiqueta (QR)
-                    </Link>
+                    {/* Finalize Button */}
+                    <form action={async () => {
+                        'use server';
+                        const { updateOrderStatus } = require('@/app/actions/orders');
+                        await updateOrderStatus(order.id, 'completed');
+                    }}>
+                        <button className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition-colors shadow-md mt-4">
+                            <CheckCircle2 className="w-5 h-5" />
+                            Finalizar (Pago e Entregue)
+                        </button>
+                    </form>
 
                     <button className="flex items-center justify-center gap-2 w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-lg transition-colors border border-red-100">
                         <XCircle className="w-4 h-4" />

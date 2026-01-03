@@ -65,16 +65,24 @@ export default function PosPage({ products }) {
         setCart(prev => prev.filter(i => i.uniqueId !== item.uniqueId));
     };
 
+    const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [discount, setDiscount] = useState('');
+
     const [lastOrderId, setLastOrderId] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    const handleCheckout = async ({ customerName, customerPhone, total, paymentMethod }) => {
+    const handleCheckout = async () => {
+        const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        const finalTotal = Math.max(0, subtotal - (parseFloat(discount) || 0));
+
         try {
             const orderId = await submitPosOrder({
                 customerName: customerName || 'Venda Balcão',
                 customerEmail: 'pdv@loja.com',
                 customerPhone: customerPhone,
-                total: total,
+                total: finalTotal,
                 paymentMethod: paymentMethod,
                 items: cart.map(item => ({
                     productName: item.name,
@@ -83,11 +91,17 @@ export default function PosPage({ products }) {
                     quantity: item.quantity,
                     price: item.price
                 })),
+                discount: parseFloat(discount) || 0,
                 isPos: true
             });
 
-            // toast.success('Venda realizada!'); // Replaced by modal
+            // Reset States
             setCart([]);
+            setCustomerName('');
+            setCustomerPhone('');
+            setPaymentMethod('cash');
+            setDiscount('');
+
             setLastOrderId(orderId);
             setShowSuccessModal(true);
         } catch (error) {
@@ -147,6 +161,14 @@ export default function PosPage({ products }) {
                     updateQuantity={updateQuantity}
                     removeFromCart={removeFromCart}
                     onCheckout={handleCheckout}
+                    customerName={customerName}
+                    setCustomerName={setCustomerName}
+                    customerPhone={customerPhone}
+                    setCustomerPhone={setCustomerPhone}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    discount={discount}
+                    setDiscount={setDiscount}
                 />
             </div>
 

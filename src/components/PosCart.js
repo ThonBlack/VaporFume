@@ -3,14 +3,21 @@
 import { useState } from 'react';
 import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, Printer } from 'lucide-react'; // Ensure Printer is imported if used, or SVG as below
 
-export default function PosCart({ cart, updateQuantity, removeFromCart, onCheckout }) {
-    const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const [customerName, setCustomerName] = useState('');
-    const [customerPhone, setCustomerPhone] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('cash'); // cash, credit, debit, pix
+export default function PosCart({
+    cart,
+    updateQuantity,
+    removeFromCart,
+    onCheckout,
+    customerName, setCustomerName,
+    customerPhone, setCustomerPhone,
+    paymentMethod, setPaymentMethod,
+    discount, setDiscount
+}) {
+    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const total = Math.max(0, subtotal - (parseFloat(discount) || 0));
 
     const handleFinish = () => {
-        onCheckout({ customerName, customerPhone, total, paymentMethod });
+        onCheckout();
     }
 
     return (
@@ -99,12 +106,41 @@ export default function PosCart({ cart, updateQuantity, removeFromCart, onChecko
                         >
                             <CreditCard className="w-4 h-4" /> Débito
                         </button>
+                        <button
+                            onClick={() => setPaymentMethod('fiado')}
+                            className={`col-span-2 flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-medium border transition-colors ${paymentMethod === 'fiado' ? 'bg-red-100 border-red-500 text-red-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            🛑 Fiado / Pendente
+                        </button>
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center text-lg font-bold pt-2">
-                    <span>Total</span>
-                    <span>R$ {total.toFixed(2)}</span>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Desconto (R$)</label>
+                    <input
+                        type="number"
+                        placeholder="0,00"
+                        className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
+                        value={discount}
+                        onChange={(e) => setDiscount(e.target.value)}
+                    />
+                </div>
+
+                <div className="flex flex-col gap-1 pt-2">
+                    <div className="flex justify-between items-center text-sm text-gray-500">
+                        <span>Subtotal</span>
+                        <span>R$ {subtotal.toFixed(2)}</span>
+                    </div>
+                    {discount > 0 && (
+                        <div className="flex justify-between items-center text-sm text-red-500">
+                            <span>Desconto</span>
+                            <span>- R$ {parseFloat(discount).toFixed(2)}</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between items-center text-lg font-bold">
+                        <span>Total Final</span>
+                        <span>R$ {total.toFixed(2)}</span>
+                    </div>
                 </div>
 
                 <button
