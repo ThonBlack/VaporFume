@@ -2,13 +2,21 @@
 
 import { db } from '@/lib/db';
 import { products, variants } from '@/db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 /**
- * Get all products for admin listing/POS
+ * Get all products for admin listing/POS (Includes Variants)
  */
 export async function getProducts() {
-    return await db.select().from(products).orderBy(desc(products.id));
+    const allProducts = await db.select().from(products).orderBy(desc(products.id));
+
+    // Enrich with variants
+    const productsWithVariants = await Promise.all(allProducts.map(async (p) => {
+        const pVariants = await db.select().from(variants).where(eq(variants.productId, p.id));
+        return { ...p, variants: pVariants };
+    }));
+
+    return productsWithVariants;
 }
 
 export async function getUniqueVariantNames() {
