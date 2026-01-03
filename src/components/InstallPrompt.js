@@ -28,8 +28,14 @@ export default function InstallPrompt() {
 
     const handleInstallClick = async () => {
         if (!deferredPrompt) {
-            // Fallback for when 'beforeinstallprompt' didn't fire (e.g. HTTP)
-            alert("Para instalar:\n1. Clique nos 3 pontinhos do navegador\n2. Selecione 'Adicionar à Tela Inicial' ou 'Instalar App'");
+            // Fallback for when 'beforeinstallprompt' didn't fire (e.g. iOS or Desktop without support)
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (isIOS) {
+                alert("Para instalar no iPhone:\n1. Toque no botão 'Compartilhar' (quadrado com seta)\n2. Role para baixo e toque em 'Adicionar à Tela de Início'");
+            } else {
+                alert("Para instalar:\n1. Clique nos 3 pontinhos do navegador\n2. Selecione 'Adicionar à Tela Inicial' ou 'Instalar App'");
+            }
             return;
         }
 

@@ -141,3 +141,13 @@ export async function createOrder(data) {
     revalidatePath('/admin/orders');
     return orderId;
 }
+
+export async function deleteOrder(id) {
+    // Delete items first (manual cascade just in case)
+    await db.delete(orderItems).where(eq(orderItems.orderId, id));
+
+    // Delete order
+    await db.delete(orders).where(eq(orders.id, id));
+
+    revalidatePath('/admin/orders');
+}
