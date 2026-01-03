@@ -56,6 +56,7 @@ export const orderItems = sqliteTable('order_items', {
     variantName: text('variant_name'),
     quantity: integer('quantity').notNull(),
     price: real('price').notNull(),
+    costPrice: real('cost_price').default(0),
 });
 
 export const productsRelations = relations(products, ({ many }) => ({

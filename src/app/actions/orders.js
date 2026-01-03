@@ -73,14 +73,23 @@ export async function createOrder(data) {
     const orderId = orderResult[0].id;
 
     if (data.items && data.items.length > 0) {
-        const itemsToInsert = data.items.map(item => ({
-            orderId,
-            productId: item.productId,
-            productName: item.productName,
-            variantName: item.variantName || (item.variants && item.variants.join(', ')),
-            quantity: item.quantity,
-            price: item.price
-        }));
+        const itemsToInsert = [];
+
+        for (const item of data.items) {
+            // Fetch product to get Cost Price
+            const productRes = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+            const product = productRes[0];
+
+            itemsToInsert.push({
+                orderId,
+                productId: item.productId,
+                productName: item.productName,
+                variantName: item.variantName || (item.variants && item.variants.join(', ')),
+                quantity: item.quantity,
+                price: item.price,
+                costPrice: product?.costPrice || 0
+            });
+        }
 
         await db.insert(orderItems).values(itemsToInsert);
 
