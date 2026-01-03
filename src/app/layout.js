@@ -12,6 +12,7 @@ const outfit = Outfit({
 });
 
 export const metadata = {
+  metadataBase: new URL('https://vaporfume.shop'),
   title: "Vapor Fumê - Sua loja de Vapes e Pods",
   description: "Encontre os melhores pods, vapes e juices.",
   manifest: '/manifest.json',
@@ -19,7 +20,22 @@ export const metadata = {
     icon: '/assets/icon-v2.png',
     shortcut: '/assets/icon-v2.png',
     apple: '/assets/icon-v2.png',
-  }
+  },
+  openGraph: {
+    title: "Vapor Fumê - Sua loja de Vapes e Pods",
+    description: "Encontre os melhores pods, vapes e juices. Ignite, Elfbar, Oxbar com entrega rápida.",
+    url: 'https://vaporfume.shop',
+    siteName: 'Vapor Fumê',
+    images: [
+      {
+        url: '/assets/icon-v2.png', // Fallback image
+        width: 800,
+        height: 600,
+      }
+    ],
+    locale: 'pt_BR',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({ children }) {
