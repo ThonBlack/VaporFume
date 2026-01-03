@@ -78,7 +78,7 @@ export default function ProductCard({ product }) {
                                 </span>
                             )}
                             <span style={{ color: 'var(--primary-dim)', fontWeight: '700', fontSize: '1.25rem' }}>
-                                R$ {product.price.toFixed(2)}
+                                R$ {(product.price || 0).toFixed(2)}
                             </span>
                         </div>
 
