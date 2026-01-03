@@ -10,33 +10,59 @@ import { toast } from 'react-hot-toast'; // Assuming we have toast, if not we us
 export default function PosPage({ products }) {
     const [cart, setCart] = useState([]);
 
+    const [selectedProductForVariant, setSelectedProductForVariant] = useState(null);
+
     // Cart Logic
-    const addToCart = (product) => {
-        setCart(prev => {
-            const existing = prev.find(item => item.id === product.id);
-            if (existing) {
-                return prev.map(item =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-                );
-            }
-            return [...prev, { ...product, quantity: 1, price: parseFloat(product.price) }];
-        });
+    const handleProductClick = (product) => {
+        // If product has variants, open modal
+        // We need to know if it has variants. The 'products' prop usually has them nested?
+        // Or we check if 'variants' array exists and has length > 0
+        // In getProducts action, we enrich with variants.
+        if (product.variants && product.variants.length > 0) {
+            setSelectedProductForVariant(product);
+        } else {
+            addToCart(product);
+        }
     };
 
-    const updateQuantity = (product, delta) => {
+    const addToCart = (product, variantName = null) => {
+        setCart(prev => {
+            // Unique ID based on product + variant
+            const itemId = variantName ? `${product.id}-${variantName}` : product.id;
+            const itemName = variantName ? `${product.name} - ${variantName}` : product.name;
+
+            const existing = prev.find(item => item.uniqueId === itemId);
+            if (existing) {
+                return prev.map(item =>
+                    item.uniqueId === itemId ? { ...item, quantity: item.quantity + 1 } : item
+                );
+            }
+            return [...prev, {
+                ...product,
+                uniqueId: itemId, // critical for cart distinction
+                name: itemName,
+                quantity: 1,
+                price: parseFloat(product.price),
+                variant: variantName
+            }];
+        });
+        setSelectedProductForVariant(null);
+    };
+
+    const updateQuantity = (item, delta) => {
         setCart(prev =>
-            prev.map(item => {
-                if (item.id === product.id) {
-                    const newQty = Math.max(0, item.quantity + delta);
-                    return { ...item, quantity: newQty };
+            prev.map(i => {
+                if (i.uniqueId === item.uniqueId) {
+                    const newQty = Math.max(0, i.quantity + delta);
+                    return { ...i, quantity: newQty };
                 }
-                return item;
-            }).filter(item => item.quantity > 0)
+                return i;
+            }).filter(i => i.quantity > 0)
         );
     };
 
-    const removeFromCart = (product) => {
-        setCart(prev => prev.filter(item => item.id !== product.id));
+    const removeFromCart = (item) => {
+        setCart(prev => prev.filter(i => i.uniqueId !== item.uniqueId));
     };
 
     const [lastOrderId, setLastOrderId] = useState(null);
@@ -53,6 +79,7 @@ export default function PosPage({ products }) {
                 items: cart.map(item => ({
                     productName: item.name,
                     productId: item.id,
+                    variantName: item.variant,
                     quantity: item.quantity,
                     price: item.price
                 })),
@@ -106,7 +133,8 @@ export default function PosPage({ products }) {
 
             {/* Left: Products */}
             <div className={`flex-1 border-r border-gray-200 overflow-y-auto ${activeTab === 'products' ? 'block' : 'hidden md:block'}`}>
-                <PosProductGrid products={products} addToCart={addToCart} />
+                {/* We pass handleProductClick instead of addToCart directly */}
+                <PosProductGrid products={products} addToCart={handleProductClick} />
             </div>
 
             {/* Right: Cart */}
@@ -121,6 +149,38 @@ export default function PosPage({ products }) {
                     onCheckout={handleCheckout}
                 />
             </div>
+
+            {/* Variant Selector Modal */}
+            {selectedProductForVariant && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-lg">{selectedProductForVariant.name}</h3>
+                            <button onClick={() => setSelectedProductForVariant(null)} className="p-2 hover:bg-gray-200 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex-1">
+                            <p className="mb-3 text-sm text-gray-500">Selecione o sabor:</p>
+                            <div className="grid grid-cols-1 gap-2">
+                                {selectedProductForVariant.variants.map(v => (
+                                    <button
+                                        key={v.name}
+                                        onClick={() => addToCart(selectedProductForVariant, v.name)}
+                                        disabled={v.stock <= 0}
+                                        className="flex items-center justify-between p-4 border rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed group"
+                                    >
+                                        <span className="font-medium group-hover:text-blue-700">{v.name}</span>
+                                        <span className={`text-xs px-2 py-1 rounded-full ${v.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {v.stock > 0 ? `${v.stock} un.` : 'Esgotado'}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Success Modal */}
             {showSuccessModal && (

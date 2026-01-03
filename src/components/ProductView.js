@@ -216,12 +216,12 @@ export default function ProductView({ product }) {
                             <div>
                                 <div className="flex items-end gap-2">
                                     <span className="text-4xl font-bold text-gray-900">
-                                        R$ {product.price.toFixed(2)}
+                                        R$ {(product.price || 0).toFixed(2)}
                                     </span>
                                     <span className="text-sm text-gray-500 mb-1 font-medium">à vista</span>
                                 </div>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    ou em até <span className="font-bold text-gray-900">12x de R$ {((product.price * 1.2) / 12).toFixed(2)}</span> (no cartão)
+                                    ou em até <span className="font-bold text-gray-900">12x de R$ {(((product.price || 0) * 1.2) / 12).toFixed(2)}</span> (no cartão)
                                 </p>
                             </div>
                         </div>
@@ -359,7 +359,7 @@ export default function ProductView({ product }) {
 
                     </div>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }
