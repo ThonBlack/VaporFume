@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Header from '@/components/Header';
 import { Star, ArrowLeft, Truck, Lock, MessageCircle, Heart, Share2, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import NotifyModal from '@/components/NotifyModal';
 import { createOrder } from '@/app/actions/orders';
 
@@ -110,6 +111,29 @@ export default function ProductView({ product }) {
         return [product.image];
     });
     const [activeImage, setActiveImage] = useState(images[0] || '/assets/ref-mobile.jpg');
+
+    const handleShare = async () => {
+        const shareData = {
+            title: `${product.name} | Vapor Fumê`,
+            text: `Confira ${product.name} na Vapor Fumê!`,
+            url: window.location.href,
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log('Error sharing:', err);
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                toast.success('Link copiado para a área de transferência!');
+            } catch (err) {
+                toast.error('Erro ao copiar link.');
+            }
+        }
+    };
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--background)', paddingBottom: '40px' }}>
@@ -324,7 +348,10 @@ export default function ProductView({ product }) {
                             >
                                 <Heart size={18} /> Salvar favorito
                             </button>
-                            <button className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                            <button
+                                onClick={handleShare}
+                                className="flex items-center gap-2 hover:text-blue-500 transition-colors"
+                            >
                                 <Share2 size={18} /> Compartilhar
                             </button>
                         </div>
