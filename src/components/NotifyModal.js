@@ -32,11 +32,15 @@ export default function NotifyModal({ isOpen, onClose, product, variant, mode = 
             // Save for next time
             if (typeof window !== 'undefined') localStorage.setItem('user_phone', phone);
 
-            // Simulate action for now, or call the real one if we had it ready
-            // await saveRestockSubscription({ productId: product.id, variantName: variant, email, phone });
+            let result;
+            if (isFavorite) {
+                result = await saveFavorite({ productId: product.id, phone });
+            } else {
+                result = await saveRestockSubscription({ productId: product.id, variantName: variant, email, phone });
+            }
 
-            // Temporary Simulation -> User asked for logic first
-            await new Promise(r => setTimeout(r, 1000));
+            if (!result.success) throw new Error(result.error);
+
 
             setSuccess(true);
             setTimeout(() => {
