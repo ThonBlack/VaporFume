@@ -324,6 +324,9 @@ export async function updateProduct(formData) {
         if (!linkedProductId) {
             // Only proceed if we successfully parsed variants above
             if (variantsJson) { // If we have intent to update variants
+                // FETCH OLD VARIANTS STOCK for comparison
+                const oldVariants = await db.select().from(variants).where(eq(variants.productId, parseInt(id)));
+
                 await db.delete(variants).where(eq(variants.productId, parseInt(id)));
 
                 for (const v of variantsWithImages) {
@@ -333,6 +336,48 @@ export async function updateProduct(formData) {
                         image: v.image,
                         productId: parseInt(id)
                     });
+
+                    // RESTOCK NOTIFICATION LOGIC
+                    try {
+                        const newStock = parseInt(v.stock) || 0;
+                        const oldStock = oldVariants.find(ov => ov.name === v.name)?.stock || 0;
+
+                        // Trigger if stock increased from 0 to > 0
+                        if (oldStock <= 0 && newStock > 0) {
+                            console.log(`[Restock] Detected restock for ${name} - ${v.name}`);
+
+                            // Find subscribers
+                            const subs = await db.select().from(restockSubscriptions)
+                                .where(and(
+                                    eq(restockSubscriptions.productId, parseInt(id)),
+                                    eq(restockSubscriptions.variantName, v.name),
+                                    eq(restockSubscriptions.notified, 0) // Only unnotified
+                                ));
+
+                            console.log(`[Restock] Found ${subs.length} subscribers`);
+
+                            for (const sub of subs) {
+                                if (sub.contactPhone) {
+                                    const message = `Olá! O produto *${name} (${v.name})* que você estava esperando chegou na Vapor Fumê! 💨\n\nGaranta o seu agora: https://vaporfume.shop/product/${updateData.slug || id}`;
+
+                                    await db.insert(messageQueue).values({
+                                        phone: sub.contactPhone,
+                                        content: message,
+                                        type: 'restock_alert',
+                                        status: 'pending',
+                                        scheduledAt: Math.floor(Date.now() / 1000)
+                                    });
+
+                                    // Mark as notified
+                                    await db.update(restockSubscriptions)
+                                        .set({ notified: 1, notifiedAt: new Date().toISOString() })
+                                        .where(eq(restockSubscriptions.id, sub.id));
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error('[Restock] Error processing notifications:', err);
+                    }
                 }
             }
         }
