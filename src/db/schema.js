@@ -45,6 +45,8 @@ export const orders = sqliteTable('orders', {
     customerPhone: text('customer_phone'),
     status: text('status').notNull().default('pending'),
     total: real('total').notNull().default(0),
+    recoveryStatus: text('recovery_status').default('none'), // none, sent, converted, failed
+    recoverySentAt: text('recovery_sent_at'),
     createdAt: text('created_at').default(new Date().toISOString()),
 });
 
