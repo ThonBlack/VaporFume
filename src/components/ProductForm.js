@@ -4,12 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Upload, X, Plus, Search, Box } from 'lucide-react';
 
-// Mock database of existing flavors across the system (could be fetched from DB too)
-const GLOBAL_FLAVORS = [
-    'Grape Ice', 'Strawberry Kiwi', 'Mint', 'Watermelon Ice',
-    'Mango', 'Blueberry Ice', 'Banana Ice', 'Peach', 'Sakura Grape',
-    'Triple Berry', 'Lemon Mint', 'Cranberry Grape'
-];
+import { getUniqueVariantNames } from '@/app/actions/products';
+
+// Mock removed, now dynamic
+const GLOBAL_FLAVORS = []; // Kept for reference or fallback if needed, but logic changes
 
 export default function ProductForm({ action, initialData = null, availableProducts = [], categories = [] }) {
     // If we have initialData, parse variants from it if they came as DB objects, 
@@ -21,7 +19,13 @@ export default function ProductForm({ action, initialData = null, availableProdu
     const [isKit, setIsKit] = useState(!!initialData?.linkedProductId); // Initialize based on data
     const [flavorSearch, setFlavorSearch] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
     const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        // Load global variant suggestions
+        getUniqueVariantNames().then(names => setSuggestions(names));
+    }, []);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -33,7 +37,7 @@ export default function ProductForm({ action, initialData = null, availableProdu
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [dropdownRef]);
 
-    const filteredFlavors = GLOBAL_FLAVORS.filter(f =>
+    const filteredFlavors = suggestions.filter(f =>
         f.toLowerCase().includes(flavorSearch.toLowerCase()) &&
         !variants.find(v => v.name === f)
     );
