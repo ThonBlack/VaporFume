@@ -45,20 +45,21 @@ export default async function AdminOrdersPage() {
                                 <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'completed' ? 'bg-green-500' :
                                     order.status === 'pending' ? 'bg-blue-500' : 'bg-gray-300'
                                     }`}></div>
-                                Pagamento a combinar
-                            </span>
-                            <DeleteOrderButton orderId={order.id} />
+                                <span className="text-xs font-medium text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                                    Pagamento a combinar
+                                </span>
+                                <DeleteOrderButton orderId={order.id} />
+                            </div>
                         </div>
-                    </div>
                     </Link>
                 ))}
 
-            {orders.length === 0 && (
-                <div className="text-center py-20 text-gray-400">
-                    Nenhum pedido encontrado.
-                </div>
-            )}
-        </div>
+                {orders.length === 0 && (
+                    <div className="text-center py-20 text-gray-400">
+                        Nenhum pedido encontrado.
+                    </div>
+                )}
+            </div>
         </div >
     );
 }
