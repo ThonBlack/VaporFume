@@ -204,6 +204,9 @@ export async function deleteProduct(entry) {
 }
 
 export async function updateProduct(formData) {
+    const fs = require('fs');
+    const path = require('path');
+
     const id = formData.get('id');
     const name = formData.get('name');
     const price = parseFloat(formData.get('price'));
@@ -215,10 +218,10 @@ export async function updateProduct(formData) {
 
     console.log(`[updateProduct] Starting update for ID: ${id}`);
 
-    console.log(`[updateProduct] Starting update for ID: ${id}`);
-
-    const fs = require('fs');
-    const path = require('path');
+    if (!id || !name || !price) {
+        console.error('Missing required fields');
+        return; // Or throw
+    }
 
     const isProduction = process.env.NODE_ENV === 'production';
     const uploadDir = isProduction
@@ -238,88 +241,44 @@ export async function updateProduct(formData) {
         }
     } catch (e) { console.error(`Error fetching current images: ${e}`); }
 
-    // Initialize newImages with existing ones to preserve order
+    // Initialize newImages with existing ones
     let newImages = [...existingImages];
 
-    // Ensure array has enough slots if we are adding to new indexes
-    // If existing has 1 item, and we upload to index 4, we need newImages[4] to be set.
-    // The previous logic `newImages[i] = ...` works fine for sparse arrays in JS, 
-    // but when filtering `Boolean` later we just need to be careful not to lose "empty" slots if that was intended (it's not).
-
+    // 2. Process Main Images
     for (let i = 0; i < 5; i++) {
         const file = formData.get(`image_${i}`);
-
-        // Check if file object exists and has size
         if (file && typeof file === 'object' && file.size > 0) {
             try {
                 const buffer = Buffer.from(await file.arrayBuffer());
                 const fileName = `${Date.now()}-img${i}-${file.name.replace(/\s+/g, '-')}`;
-                // Ensure directory existence (redundant but safe)
-                if (!fs.existsSync(uploadDir)) {
-                    try {
-                        fs.mkdirSync(uploadDir, { recursive: true });
-                    } catch (mkdirErr) {
-                        console.error('Error creating upload dir:', mkdirErr);
-                        throw new Error('Failed to create upload directory');
-                    }
-                }
-
                 const fullPath = path.join(uploadDir, fileName);
-                console.log(`[updateProduct] Writing file to: ${fullPath}`);
+
                 fs.writeFileSync(fullPath, buffer);
                 try { fs.chmodSync(fullPath, 0o644); } catch (e) { console.error('Chmod failed:', e); }
 
-                const publicPath = `/uploads/${fileName}`;
-
-                // CRITICAL: Overwrite the specific index.
-                newImages[i] = publicPath;
-
+                // Update specific index
+                newImages[i] = `/uploads/${fileName}`;
             } catch (e) {
                 console.error(`Failed to upload image_${i}:`, e);
-                // Continue despite one image failing? Or throw?
-                // Let's log and maybe not throw to save partial work, but user sees error 'server exception' usually denotes crash.
-                // If we catch here, we avoid the 500 crash.
             }
         }
     }
+    const finalImages = newImages;
+    const mainImage = finalImages.length > 0 ? finalImages[0] : (existingImages[0] || '/assets/ref-mobile.jpg');
 
-    // Filter out nulls/undefined/empty strings, but ONLY if we want to compact. 
-    // If original images were ['a', 'b', 'c'] and we updated index 1 to 'd', we have ['a', 'd', 'c'].
-    // If original was ['a'] and we updated index 2 to 'b', we have ['a', empty, 'b'].
-    // We should filter Boolean to remove empty slots.
-    // FIX: Do NOT filter boolean if we want to preserve 5 slots? 
-    // Actually our UI maps [0,1,2,3,4]. If we return ['a', 'b'], index 2 is undefined.
-    // But if we have ['a', empty, 'b'] -> JSON stringify -> ["a",null,"b"].
-    // The frontend doing `JSON.parse(images)[index]` will get null for index 1, and "b" for index 2.
-    // If we FILTER, we get ["a", "b"]. Start UI: Index 0=a, Index 1=b. Index 2=null.
-    // So the image "b" moves from slot 2 to slot 1 visually.
-    // The user uploaded to slot 4 (index 4). If slots 0-3 are empty, we have [null, null, null, null, "img"].
-    // Filter removes nulls -> ["img"].
-    // UI displays "img" at index 0 (Cover).
-    // The user sees it at index 0.
-    // Wait, the user screenshot shows image at index 4 (last one) broken.
-    // If it was filtered, it would be at index 0 (if others empty) or appended.
-    // If the user *wants* specific slots, we should NOT filter.
-    // Let's remove the filter to respect the slots.
-    const finalImages = newImages; // .filter(Boolean); REMOVED FILTER to preserve slots
-
-    const mainImage = finalImages.length > 0 ? finalImages[0] : '/assets/ref-mobile.jpg';
-
-    // Variant Images Logic
+    // 3. Process Variants (Validation Phase)
     const variantsWithImages = [];
-
     if (!linkedProductId && variantsJson) {
         try {
             const parsedVariants = JSON.parse(variantsJson);
+            // Fetch current variants for image preservation
             const currentVariants = await db.select().from(variants).where(eq(variants.productId, parseInt(id)));
 
             for (const v of parsedVariants) {
-                // Check if we uploaded a new image for this variant
                 const varFile = formData.get(`variant_image_${v.name}`);
                 let varImagePath = null;
 
-                // Try to find existing variant image if we don't upload a new one
-                // We need to match by name (as ID might change if we delete/recreate)
+                // Check existing image
                 const existingVar = currentVariants.find(ev => ev.name === v.name);
                 varImagePath = existingVar ? existingVar.image : null;
 
@@ -327,7 +286,9 @@ export async function updateProduct(formData) {
                     try {
                         const buffer = Buffer.from(await varFile.arrayBuffer());
                         const fileName = `${Date.now()}-var-${v.name.replace(/\s+/g, '-')}-${varFile.name.replace(/\s+/g, '-')}`;
-                        fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+                        const fullPath = path.join(uploadDir, fileName);
+                        fs.writeFileSync(fullPath, buffer);
+                        try { fs.chmodSync(fullPath, 0o644); } catch (e) { }
                         varImagePath = `/uploads/${fileName}`;
                     } catch (e) {
                         console.error(`Failed to upload variant image for ${v.name}: ${e}`);
@@ -336,12 +297,13 @@ export async function updateProduct(formData) {
                 variantsWithImages.push({ ...v, image: varImagePath });
             }
         } catch (e) {
-            console.error(`Error processing variants: ${e}`);
+            console.error(`Error processing variants JSON: ${e}`);
+            throw new Error("Invalid variants data"); // Stop execution to prevent deleting distinct variants
         }
     }
 
     try {
-        // 1. Update Product
+        // 4. Update Product in DB
         const updateData = {
             name,
             price,
@@ -358,17 +320,20 @@ export async function updateProduct(formData) {
 
         await db.update(products).set(updateData).where(eq(products.id, parseInt(id)));
 
-        // 2. Update Variants
-        await db.delete(variants).where(eq(variants.productId, parseInt(id)));
+        // 5. Update Variants (Safe Delete & Insert)
+        if (!linkedProductId) {
+            // Only proceed if we successfully parsed variants above
+            if (variantsJson) { // If we have intent to update variants
+                await db.delete(variants).where(eq(variants.productId, parseInt(id)));
 
-        if (!linkedProductId && variantsWithImages.length > 0) {
-            for (const v of variantsWithImages) {
-                await db.insert(variants).values({
-                    name: v.name,
-                    stock: parseInt(v.stock) || 0,
-                    image: v.image,
-                    productId: parseInt(id)
-                });
+                for (const v of variantsWithImages) {
+                    await db.insert(variants).values({
+                        name: v.name,
+                        stock: parseInt(v.stock) || 0,
+                        image: v.image,
+                        productId: parseInt(id)
+                    });
+                }
             }
         }
 
@@ -376,6 +341,7 @@ export async function updateProduct(formData) {
         revalidatePath('/');
     } catch (error) {
         console.error(`CRITICAL ERROR updating product: ${error}`);
+        // Consider returning error status instead of redirecting if possible, but action expects form submit
     }
 
     redirect('/admin/products');
