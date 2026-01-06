@@ -20,7 +20,8 @@ export async function submitPosOrder(data) {
             // If payment is 'cash', 'pix', 'credit_card', 'debit_card', usually it means paid.
             // Let's stick to 'completed' for POS to distinguish from pending checkout orders?
             // Actually, matching original behavior: 'pending'.
-            status: 'pending'
+            status: 'pending',
+            paymentMethod: data.paymentMethod || 'cash'
         }).returning({ id: orders.id });
 
         const orderId = orderResult[0].id;
@@ -64,22 +65,38 @@ export async function submitPosOrder(data) {
                 const targetProductId = product.linkedProductId || product.id;
 
                 if (item.variantName) {
-                    const variant = await db.query.variants.findFirst({
-                        where: (fields, { and, eq }) => and(eq(fields.productId, targetProductId), eq(fields.name, item.variantName))
+                    const normalizedVariantName = item.variantName.trim();
+                    console.log(`[POS Stock] Looking for variant: "${normalizedVariantName}" for Product ID: ${targetProductId}`);
+
+                    // Try exact match first
+                    let variant = await db.query.variants.findFirst({
+                        where: (fields, { and, eq }) => and(eq(fields.productId, targetProductId), eq(fields.name, normalizedVariantName))
                     });
 
+                    // If not found, try case-insensitive or loose match (if needed, but start with trim)
+                    if (!variant) {
+                        // Fallback: try to find by checking if DB name contains the variant name or vice versa
+                        // Or select all variants and find in JS (safer for small lists)
+                        const allVariants = await db.select().from(variants).where(eq(variants.productId, targetProductId));
+                        variant = allVariants.find(v => v.name.trim().toLowerCase() === normalizedVariantName.toLowerCase());
+                    }
+
                     if (variant) {
+                        console.log(`[POS Stock] Decrementing stock for variant: ${variant.name} (Old: ${variant.stock})`);
                         const newStock = Math.max(0, variant.stock - item.quantity);
                         await db.update(variants).set({ stock: newStock }).where(eq(variants.id, variant.id));
+                    } else {
+                        console.warn(`[POS Stock] Variant not found: ${normalizedVariantName}`);
                     }
                 } else {
-                    // Fallback: If no variant name, try to find ANY variant for this product if it has only one?
-                    // Or just skip if it's a variant-based product but no variant selected (shouldn't happen in valid POS flow)
+                    // Fallback: Single variant product
+                    console.log(`[POS Stock] No variant name, looking for default/any variant for Product ID: ${targetProductId}`);
                     const variant = await db.query.variants.findFirst({
                         where: (fields, { eq }) => eq(fields.productId, targetProductId)
                     });
 
                     if (variant) {
+                        console.log(`[POS Stock] Decrementing stock for default variant: ${variant.name} (Old: ${variant.stock})`);
                         const newStock = Math.max(0, variant.stock - item.quantity);
                         await db.update(variants).set({ stock: newStock }).where(eq(variants.id, variant.id));
                     }

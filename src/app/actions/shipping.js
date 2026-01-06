@@ -28,7 +28,7 @@ export async function calculateShipping(cep) {
 
         // Payload for 1 item generic (15x15x15, 0.3kg)
         const payload = {
-            from: { postal_code: '38000000' },
+            from: { postal_code: '38010210' }, // Uberaba (Centro - Valid CEP)
             to: { postal_code: cleanCep },
             package: {
                 height: 15,
@@ -40,7 +40,7 @@ export async function calculateShipping(cep) {
                 receipt: false,
                 own_hand: false
             },
-            services: '1,2'
+            services: '3,4,33' // Jadlog .Package, Jadlog .Com, JeT Standard
         };
 
         const response = await fetch(apiUrl, {
@@ -70,24 +70,51 @@ export async function calculateShipping(cep) {
         // data is an array of quotes.
         // We want the cheapest one (usually PAC) or MiniEnvio.
 
-        // Filter for valid quotes w/o error
-        const validQuotes = data.filter(q => !q.error && q.price);
+        // Filter for specific services: Jadlog (3, 4) and JeT (33)
+        // AND ensure no errors
+        const allowedServices = ['3', '4', '33']; // .Package, .Com, Standard (JeT)
 
-        if (validQuotes.length === 0) {
-            return { price: 25.90, warning: 'Nenhuma cotação disponível' };
+        const filteredQuotes = data.filter(q =>
+            !q.error &&
+            q.price &&
+            allowedServices.includes(String(q.id))
+        );
+
+        console.log('[Shipping Debug] Total Quotes:', data.length);
+        console.log('[Shipping Debug] Filtered Quotes:', filteredQuotes.length);
+        if (filteredQuotes.length === 0) {
+            console.log('[Shipping Debug] ALL REJECTED. Sample Check:');
+            data.slice(0, 3).forEach(q => console.log(`ID: ${q.id} (${typeof q.id}) | Name: ${q.name} | Price: ${q.price}`));
         }
 
-        // Sort by price ascending
-        validQuotes.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        if (filteredQuotes.length === 0) {
+            // If explicit services fail, fallback to any valid ones (e.g. Correios as backup?)
+            // Or return warning. Let's try to return at least something.
+            const anyValid = data.filter(q => !q.error && q.price);
+            if (anyValid.length === 0) {
+                return { price: 25.90, warning: 'Nenhuma cotação disponível' };
+            }
+            // If fallback needed, maybe return top 2 cheapest regardless of carrier?
+            // For now, let's stick to user request: "Limit to JET and Jadlog"
+            // If they are not available, we might return empty or error.
+            return { price: 25.90, warning: 'Jadlog/JeT indisponíveis para este CEP' };
+        }
 
-        const cheapest = validQuotes[0];
-        console.log('[Shipping] Cheapest Quote:', cheapest.name, cheapest.price);
+        // Map to cleaner format
+        const options = filteredQuotes.map(q => ({
+            name: `${q.company.name} (${q.name})`,
+            service: q.name,
+            carrier: q.company.name,
+            price: parseFloat(q.price),
+            days: q.days || q.delivery_time || '?',
+            id: q.id,
+            picture: q.company.picture
+        }));
 
-        return {
-            price: parseFloat(cheapest.price),
-            service: cheapest.name,
-            days: cheapest.models?.[0]?.delivery_time || '?'
-        };
+        // Sort by price
+        options.sort((a, b) => a.price - b.price);
+
+        return options; // Return Array
 
     } catch (error) {
         console.error('[Shipping] Exception:', error);

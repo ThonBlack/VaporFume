@@ -5,143 +5,127 @@ import { getSettings } from '@/app/actions/settings';
 import Link from 'next/link';
 
 export default function BannerCarousel() {
-    const [banner, setBanner] = useState(null);
+    const [slides, setSlides] = useState([]);
+    const [currentSlide, setCurrentSlide] = useState(0);
 
     useEffect(() => {
         getSettings().then(settings => {
-            if (settings.banner_image_url) {
-                setBanner({
-                    image: settings.banner_image_url,
+            let loadedSlides = [];
+
+            // 1. Try to parse 'banners' JSON array (New System)
+            if (settings.banners) {
+                try {
+                    loadedSlides = JSON.parse(settings.banners);
+                } catch (e) { console.error('Error parsing banners:', e); }
+            }
+
+            // 2. Fallback/Migration: If no banners array, check for old single banner
+            if (loadedSlides.length === 0 && settings.banner_image_url) {
+                loadedSlides.push({
+                    id: 'legacy',
+                    desktop: settings.banner_image_url,
+                    mobile: settings.banner_image_mobile_url || null,
                     title: settings.banner_title || '',
                     subtitle: settings.banner_subtitle || '',
                     link: settings.banner_link || '/product/ignite-v50'
                 });
             }
+
+            setSlides(loadedSlides);
         });
     }, []);
 
-    // Custom Banner
-    if (banner) {
-        return (
-            <div style={{
-                width: '100%',
-                height: '400px', // Increased height for image
-                position: 'relative',
-                overflow: 'hidden',
-                marginBottom: '32px'
-            }}>
-                <img
-                    src={banner.image}
-                    alt="Banner"
-                    className="w-full h-full object-cover"
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}
-                />
+    // Auto-play
+    useEffect(() => {
+        if (slides.length <= 1) return;
+        const timer = setInterval(() => {
+            setCurrentSlide(prev => (prev + 1) % slides.length);
+        }, 5000); // 5 seconds
+        return () => clearInterval(timer);
+    }, [slides]);
 
-                {/* Overlay Text */}
-                {(banner.title || banner.subtitle) && (
-                    <div className="absolute inset-0 bg-black/40 z-10 flex items-center justify-center">
-                        <div className="text-center text-white p-4">
-                            {banner.title && (
-                                <h2 style={{
-                                    fontSize: '3rem',
-                                    fontWeight: '800',
-                                    lineHeight: 1.1,
-                                    textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                                }}>
-                                    {banner.title}
-                                </h2>
-                            )}
-                            {banner.subtitle && (
-                                <p style={{ fontSize: '1.2rem', marginTop: '10px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                                    {banner.subtitle}
-                                </p>
-                            )}
-                            <div className="mt-6">
-                                <Link href={banner.link || '#'}>
-                                    <button className="btn btn-primary">
-                                        Comprar Agora
-                                    </button>
-                                </Link>
-                            </div>
-                        </div>
+    // Validation
+    const hasSlides = slides.length > 0;
+
+    if (!hasSlides) {
+        // Fallback Default Hero (Ignite V50)
+        return (
+            <div style={{ width: '100%', height: 'auto', minHeight: '350px', background: 'linear-gradient(45deg, #111, #333)', position: 'relative', overflow: 'hidden', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* Default content kept for safety/fallback */}
+                <div className="container flex items-center justify-between h-full relative px-6">
+                    <div style={{ zIndex: 2, maxWidth: '100%' }}>
+                        <h2 className="text-white text-4xl font-bold">Vapor Fumê</h2>
+                        <p className="text-gray-300 mt-2">Os melhores produtos do mercado.</p>
                     </div>
-                )}
+                </div>
             </div>
         );
     }
 
-    // Default Fallback
-    return (
-        <div style={{
-            width: '100%',
-            height: 'auto',
-            minHeight: '300px',
-            background: '#000',
-            position: 'relative',
-            overflow: 'hidden',
-            marginBottom: '32px'
-        }}>
-            {/* Slide 1 - Promo */}
-            <div style={{
-                width: '100%',
-                height: '100%',
-                minHeight: '300px',
-                background: 'linear-gradient(45deg, #111 0%, #333 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                padding: '20px 0'
-            }}>
-                <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', position: 'relative' }}>
-                    <div style={{ zIndex: 2, maxWidth: '100%' }}>
-                        <span style={{
-                            background: 'var(--primary)',
-                            color: '#000',
-                            fontWeight: 'bold',
-                            padding: '4px 12px',
-                            borderRadius: '4px',
-                            fontSize: '0.8rem'
-                        }}>
-                            NOVIDADE
-                        </span>
-                        <h2 style={{
-                            color: '#fff',
-                            fontSize: 'clamp(2rem, 5vw, 3rem)', /* Responsive Font */
-                            fontWeight: '800',
-                            marginTop: '12px',
-                            lineHeight: 1.1
-                        }}>
-                            IGNITE V50<br />
-                            <span style={{ color: 'var(--primary)' }}>JÁ DISPONÍVEL</span>
-                        </h2>
-                        <p style={{ color: '#ccc', margin: '12px 0', fontSize: '1rem', maxWidth: '300px' }}>
-                            A tecnologia mais avançada em Pods Descartáveis.
-                        </p>
-                        <Link href="/product/ignite-v50">
-                            <button className="btn btn-primary">
-                                Comprar Agora
-                            </button>
-                        </Link>
-                    </div>
+    const banner = slides[currentSlide];
 
-                    {/* Decorative Circle - Hidden on mobile via display: none in media or simple width check logic */}
-                    {/* Simplified: Reduced size and opacity */}
-                    <div style={{
-                        width: '300px',
-                        height: '300px',
-                        borderRadius: '50%',
-                        background: 'var(--primary)',
-                        filter: 'blur(80px)',
-                        opacity: 0.15,
-                        position: 'absolute',
-                        right: '-50px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        pointerEvents: 'none'
-                    }} />
+    return (
+        <div className="w-full relative overflow-hidden mb-8 group" style={{ height: '450px' }}> {/* Fixed height container */}
+            {/* Slides */}
+            {slides.map((slide, index) => (
+                <div
+                    key={index}
+                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                >
+                    <Link href={slide.link || '#'}>
+                        <picture>
+                            {slide.mobile && (
+                                <source media="(max-width: 768px)" srcSet={slide.mobile} />
+                            )}
+                            <img
+                                src={slide.desktop}
+                                alt={slide.title || 'Banner'}
+                                className="w-full h-full object-cover"
+                            />
+                        </picture>
+                        {/* Overlay */}
+                        {(slide.title || slide.subtitle) && (
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <div className="text-center text-white p-4 max-w-2xl px-6">
+                                    {slide.title && <h2 className="text-3xl md:text-5xl font-extrabold mb-2 drop-shadow-md">{slide.title}</h2>}
+                                    {slide.subtitle && <p className="text-lg md:text-xl drop-shadow-sm">{slide.subtitle}</p>}
+                                </div>
+                            </div>
+                        )}
+                    </Link>
                 </div>
-            </div>
+            ))}
+
+            {/* Navigation Dots */}
+            {slides.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                    {slides.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentSlide(idx)}
+                            className={`w-3 h-3 rounded-full transition-all ${idx === currentSlide ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'}`}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Arrows (Optional, only show on hover) */}
+            {slides.length > 1 && (
+                <>
+                    <button
+                        onClick={() => setCurrentSlide(prev => (prev - 1 + slides.length) % slides.length)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                    >
+                        ❮
+                    </button>
+                    <button
+                        onClick={() => setCurrentSlide(prev => (prev + 1) % slides.length)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                    >
+                        ❯
+                    </button>
+                </>
+            )}
         </div>
     );
 }

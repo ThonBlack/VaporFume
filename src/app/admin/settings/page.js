@@ -2,6 +2,8 @@ import { getSettings } from '@/app/actions/settings';
 import SettingsForm from '@/components/SettingsForm';
 import { Settings as SettingsIcon } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminSettingsPage() {
     const settings = await getSettings();
 

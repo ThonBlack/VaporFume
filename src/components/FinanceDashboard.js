@@ -129,7 +129,7 @@ export default function FinanceDashboard() {
 
                     {/* Chart Section */}
                     <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                        <h3 className="text-lg font-bold text-gray-900 mb-6">Desemoenho Diário</h3>
+                        <h3 className="text-lg font-bold text-gray-900 mb-6">Desempenho Diário</h3>
                         <div className="h-64 flex items-end gap-2">
                             {stats.chartData.length === 0 ? (
                                 <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -137,10 +137,22 @@ export default function FinanceDashboard() {
                                 </div>
                             ) : (
                                 stats.chartData.map((day, idx) => {
-                                    const maxRev = Math.max(...stats.chartData.map(d => d.revenue));
+                                    const allRevenues = stats.chartData.map(d => d.revenue);
+                                    const maxRev = Math.max(...allRevenues) || 1;
+                                    const minRev = Math.min(...allRevenues);
+
                                     const height = (day.revenue / maxRev) * 100;
+
+                                    // Color Logic
+                                    let barColor = 'bg-gray-200';
+                                    // Only highlight if there is actual variance or data
+                                    if (allRevenues.some(r => r > 0)) {
+                                        if (day.revenue === maxRev) barColor = 'bg-green-500';
+                                        else if (day.revenue === minRev) barColor = 'bg-red-400';
+                                    }
+
                                     return (
-                                        <div key={idx} className="flex-1 flex flex-col justify-end group relative">
+                                        <div key={idx} className="flex-1 flex flex-col justify-end group relative h-full">
                                             {/* Tooltip */}
                                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                                                 {new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
@@ -150,8 +162,8 @@ export default function FinanceDashboard() {
 
                                             {/* Bar */}
                                             <div
-                                                className="w-full bg-black/5 hover:bg-black/80 transition-all rounded-t-sm min-h-[4px]"
-                                                style={{ height: `${height}%` }}
+                                                className={`w-full ${barColor} hover:bg-black transition-all rounded-t-sm min-h-[4px]`}
+                                                style={{ height: `${Math.max(height, 5)}%` }}
                                             ></div>
 
                                             {/* Label */}
@@ -163,6 +175,28 @@ export default function FinanceDashboard() {
                                 })
                             )}
                         </div>
+                    </div>
+
+                    {/* Payment Breakdown (New) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <PaymentCard
+                            title="Pix"
+                            icon={DollarSign}
+                            data={stats.paymentMethods?.pix}
+                            color="bg-green-50 text-green-700 border-green-100"
+                        />
+                        <PaymentCard
+                            title="Cartão de Crédito"
+                            icon={CreditCard}
+                            data={stats.paymentMethods?.credit_card}
+                            color="bg-blue-50 text-blue-700 border-blue-100"
+                        />
+                        <PaymentCard
+                            title="Dinheiro"
+                            icon={DollarSign}
+                            data={stats.paymentMethods?.cash}
+                            color="bg-yellow-50 text-yellow-700 border-yellow-100"
+                        />
                     </div>
 
                     {/* Top Products */}
@@ -227,4 +261,20 @@ function KPICard({ title, value, icon: Icon, color, subtitle }) {
 
 function formatMoney(val) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+}
+
+function PaymentCard({ title, icon: Icon, data, color }) {
+    if (!data) return null;
+    return (
+        <div className={`p-6 rounded-2xl border flex items-center justify-between ${color}`}>
+            <div>
+                <p className="text-xs font-bold uppercase opacity-70 mb-1">{title}</p>
+                <h3 className="text-xl font-bold">{formatMoney(data.revenue)}</h3>
+                <p className="text-sm opacity-80 mt-1">{data.count} pedidos</p>
+            </div>
+            <div className="p-3 bg-white/50 rounded-lg">
+                <Icon size={24} />
+            </div>
+        </div>
+    );
 }

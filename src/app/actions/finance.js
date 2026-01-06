@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders, orderItems } from '@/db/schema';
-import { sql, and, gte, lte, eq } from 'drizzle-orm';
+import { orders, orderItems, products } from '@/db/schema';
+import { sql, and, gte, lte, eq, inArray } from 'drizzle-orm';
 
 /**
  * Get Financial Metrics for a given period
@@ -18,12 +18,16 @@ export async function getFinancialMetrics(startDate, endDate) {
     const sales = await db.select({
         id: orders.id,
         total: orders.total,
-        date: orders.createdAt
+        id: orders.id,
+        total: orders.total,
+        date: orders.createdAt,
+        paymentMethod: orders.paymentMethod
     })
         .from(orders)
         .where(and(
             gte(orders.createdAt, start),
-            lte(orders.createdAt, end)
+            lte(orders.createdAt, end),
+            inArray(orders.status, ['Pago', 'paid', 'completed'])
         ));
 
     // 2. Calculate Revenue & Ticket & Count
@@ -31,26 +35,32 @@ export async function getFinancialMetrics(startDate, endDate) {
     const count = sales.length;
     const avgTicket = count > 0 ? revenue / count : 0;
 
-    // 3. Calculate Profit (Need to join with items)
-    // We fetch all items from these orders
+    // 3. Calculate Profit (Need to join with items AND products for fallback cost)
     const items = await db.select({
         price: orderItems.price,
         cost: orderItems.costPrice,
         quantity: orderItems.quantity,
         productName: orderItems.productName,
         variantName: orderItems.variantName,
-        date: orders.createdAt
+        currentProductCost: products.costPrice
     })
         .from(orderItems)
         .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .leftJoin(products, eq(orderItems.productId, products.id))
         .where(and(
             gte(orders.createdAt, start),
-            lte(orders.createdAt, end)
+            lte(orders.createdAt, end),
+            inArray(orders.status, ['Pago', 'paid', 'completed'])
         ));
 
     let totalCost = 0;
     items.forEach(item => {
-        totalCost += (item.cost || 0) * item.quantity;
+        // Fallback Logic: Use historical cost if > 0, otherwise use current product cost
+        const historicalCost = parseFloat(item.cost || 0);
+        const currentCost = parseFloat(item.currentProductCost || 0);
+        const finalCost = historicalCost > 0 ? historicalCost : currentCost;
+
+        totalCost += finalCost * item.quantity;
     });
 
     const profit = revenue - totalCost;
@@ -74,9 +84,14 @@ export async function getFinancialMetrics(startDate, endDate) {
         if (!productStats[key]) {
             productStats[key] = { name: key, revenue: 0, quantity: 0, profit: 0 };
         }
+
+        const historicalCost = parseFloat(item.cost || 0);
+        const currentCost = parseFloat(item.currentProductCost || 0);
+        const finalCost = historicalCost > 0 ? historicalCost : currentCost;
+
         productStats[key].revenue += (item.price * item.quantity);
         productStats[key].quantity += item.quantity;
-        productStats[key].profit += ((item.price - (item.cost || 0)) * item.quantity);
+        productStats[key].profit += ((item.price - finalCost) * item.quantity);
     });
 
     const topProducts = Object.values(productStats)
@@ -86,6 +101,28 @@ export async function getFinancialMetrics(startDate, endDate) {
     // Fill missing days if needed, but for now return dense data
     const chartData = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
 
+    // 6. Payment Method Breakdown (New)
+    const paymentMethods = {
+        pix: { count: 0, revenue: 0 },
+        credit_card: { count: 0, revenue: 0 },
+        cash: { count: 0, revenue: 0 },
+        unknown: { count: 0, revenue: 0 }
+    };
+
+    sales.forEach(order => {
+        const method = order.paymentMethod;
+        if (paymentMethods[method]) {
+            paymentMethods[method].count++;
+            paymentMethods[method].revenue += order.total;
+        } else {
+            // Handle null or legacy data
+            const key = method ? 'unknown' : 'pix'; // Assume legacy as pix or unknown? Let's default legacy to 'pix' if mostly pix, or keep unknown.
+            // Actually, safe bet is unknown for accuracy.
+            paymentMethods['unknown'].count++;
+            paymentMethods['unknown'].revenue += order.total;
+        }
+    });
+
     return {
         revenue,
         profit,
@@ -93,6 +130,7 @@ export async function getFinancialMetrics(startDate, endDate) {
         count,
         avgTicket,
         chartData,
-        topProducts
+        topProducts,
+        paymentMethods
     };
 }

@@ -23,6 +23,7 @@ export async function createPixPayment(paymentInput) {
             transaction_amount: Number(parseFloat(paymentInput.amount).toFixed(2)),
             description: paymentInput.description,
             payment_method_id: 'pix',
+            external_reference: paymentInput.external_reference, // Linked Order ID
             payer: {
                 email: paymentInput.email,
                 first_name: paymentInput.payer?.first_name || 'Cliente',
@@ -55,5 +56,28 @@ export async function createPixPayment(paymentInput) {
             console.error('Mercado Pago Response Data:', JSON.stringify(error.response.data, null, 2));
         }
         throw new Error('Falha ao criar pagamento Pix: ' + (error.cause || error.message));
+    }
+}
+
+/**
+ * Get Payment Details by ID
+ */
+export async function getPayment(id) {
+    const settings = await getSettings();
+    const accessToken = settings.mercadopago_access_token;
+
+    if (!accessToken) {
+        throw new Error('Access Token não configurado.');
+    }
+
+    const client = new MercadoPagoConfig({ accessToken: accessToken });
+    const payment = new Payment(client);
+
+    try {
+        const result = await payment.get({ id });
+        return result;
+    } catch (error) {
+        console.error('Mercado Pago Get Payment Error:', error);
+        throw error;
     }
 }

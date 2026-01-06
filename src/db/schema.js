@@ -43,7 +43,9 @@ export const orders = sqliteTable('orders', {
     customerName: text('customer_name').notNull(),
     customerEmail: text('customer_email'),
     customerPhone: text('customer_phone'),
+    address: text('address'), // JSON string or text address
     status: text('status').notNull().default('pending'),
+    paymentMethod: text('payment_method'), // 'pix', 'credit_card', 'cash'
     total: real('total').notNull().default(0),
     recoveryStatus: text('recovery_status').default('none'), // none, sent, converted, failed
     recoverySentAt: text('recovery_sent_at'),
@@ -121,6 +123,13 @@ export const customers = sqliteTable('customers', {
     phone: text('phone').notNull().unique(),
     password: text('password').notNull(),
     name: text('name'),
+    customerPhone: text('customer_phone'),
+    address: text('address'), // JSON string or text address
+    status: text('status').notNull().default('pending'),
+    origin: text('origin').default('signup'), // signup, order, import
+    tags: text('tags'), // JSON array of tags
+    lastInteraction: text('last_interaction'), // ISO date of last msg received
+    lastCampaignAt: text('last_campaign_at'), // ISO date of last mass msg sent
     createdAt: text('created_at').default(new Date().toISOString()),
 });
 

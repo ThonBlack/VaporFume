@@ -12,6 +12,21 @@ export default function NotifyModal({ isOpen, onClose, product, variant, mode = 
 
     // Load phone from storage
     if (isOpen && !phone && typeof window !== 'undefined') {
+        // 1. Try logged in user data
+        const userData = localStorage.getItem('user_data');
+        if (userData) {
+            try {
+                const parsed = JSON.parse(userData);
+                if (parsed.phone) {
+                    setPhone(parsed.phone);
+                    return;
+                }
+            } catch (e) {
+                console.error('Error parsing user_data', e);
+            }
+        }
+
+        // 2. Try legacy/simple saved phone
         const saved = localStorage.getItem('user_phone');
         if (saved) setPhone(saved);
     }

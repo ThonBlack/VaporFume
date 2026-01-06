@@ -29,6 +29,7 @@ export default function CheckoutPage() {
     const [shippingCost, setShippingCost] = useState(0);
     const [shippingService, setShippingService] = useState(null); // 'Correios PAC', 'Motoboy', etc.
     const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+    const [shippingOptions, setShippingOptions] = useState([]);
     const [shippingError, setShippingError] = useState(null);
 
     const [paymentMethod, setPaymentMethod] = useState('whatsapp');
@@ -101,22 +102,34 @@ export default function CheckoutPage() {
                 if (isUberaba) {
                     setShippingCost(0.00);
                     setShippingService('Entrega Grátis (Uberaba)');
+                    setShippingOptions([]); // Clear options
                     setIsCalculatingShipping(false);
                 } else {
                     // Call Server Action for Melhor Envio
-                    const shippingRes = await calculateShipping(val);
+                    const res = await calculateShipping(val);
 
-                    if (shippingRes.error) {
-                        setShippingError(shippingRes.error);
-                        // Fallback fixed price if error
+                    if (Array.isArray(res)) {
+                        // We have multiple options
+                        setShippingOptions(res);
+                        // Auto-select cheapest
+                        setShippingCost(res[0].price);
+                        setShippingService(`${res[0].carrier} - ${res[0].name} (${res[0].days} dias)`);
+                        setShippingError(null);
+                    } else if (res.error) {
+                        setShippingError(res.error);
                         setShippingCost(25.90);
-                        setShippingService('Frete Fixo (Erro no Cálculo)');
-                    } else if (shippingRes.warning) {
+                        setShippingService('Frete Fixo (Erro)');
+                        setShippingOptions([]);
+                    } else if (res.warning) {
+                        // Fallback
                         setShippingCost(25.90);
                         setShippingService('Frete Fixo');
+                        setShippingOptions([]);
                     } else {
-                        setShippingCost(shippingRes.price);
-                        setShippingService(`Frete Correios (${shippingRes.service})`);
+                        // Legacy single object (shouldn't happen with new backend but safe to keep)
+                        setShippingCost(res.price);
+                        setShippingService(`Frete (${res.service})`);
+                        setShippingOptions([]);
                     }
                     setIsCalculatingShipping(false);
                 }
@@ -131,7 +144,9 @@ export default function CheckoutPage() {
             if (shippingCost !== 0) {
                 setShippingCost(0);
                 setShippingService(null);
+                setShippingOptions([]);
             }
+            setShippingError(null);
         }
     };
 
@@ -147,16 +162,21 @@ export default function CheckoutPage() {
             const res = await processCheckout({
                 customerName: formData.name,
                 customerEmail: formData.email,
-                customerCPF: formData.cpf, // Pass CPF
+                customerCPF: formData.cpf,
                 items: cart,
                 total: cartTotal + shippingCost,
                 paymentMethod: paymentMethod,
                 customerPhone: formData.phone,
-                customerAddress: `${formData.address}, ${formData.number} - ${formData.neighborhood}`, // Combine
-                customerCity: formData.city,
-                customerState: formData.state,
-                customerZip: formData.postalCode,
-                shippingService: shippingService // Save service name
+                // Send struct object for Admin Panel
+                address: {
+                    street: formData.address,
+                    number: formData.number,
+                    neighborhood: formData.neighborhood,
+                    city: formData.city,
+                    state: formData.state,
+                    cep: formData.postalCode
+                },
+                shippingService: shippingService
             });
 
             console.log('[Client Checkout] Server Action Result:', res);
@@ -405,6 +425,69 @@ export default function CheckoutPage() {
                                                 />
                                             </div>
                                         </div>
+
+                                        {shippingOptions.length > 0 && (
+                                            <div className="mt-6 animate-in fade-in slide-in-from-bottom-2">
+                                                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                                                    <Truck className="w-4 h-4" />
+                                                    Escolha a Entrega
+                                                </label>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {shippingOptions.map((opt, idx) => {
+                                                        const isSelected = shippingService && shippingService.includes(opt.name);
+                                                        return (
+                                                            <div
+                                                                key={idx}
+                                                                onClick={() => {
+                                                                    setShippingCost(opt.price);
+                                                                    setShippingService(`${opt.carrier} - ${opt.name} (${opt.days} dias)`);
+                                                                }}
+                                                                className={`relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${isSelected
+                                                                    ? 'border-black bg-gray-50 shadow-sm'
+                                                                    : 'border-gray-100 hover:border-gray-200 hover:bg-white bg-white'
+                                                                    }`}
+                                                            >
+                                                                {/* Left: Logo & Info */}
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-12 h-12 flex-shrink-0 bg-white border border-gray-100 rounded-lg p-1 flex items-center justify-center">
+                                                                        {opt.picture ? (
+                                                                            <img src={opt.picture} alt={opt.carrier} className="w-full h-full object-contain" />
+                                                                        ) : (
+                                                                            <Truck className="w-6 h-6 text-gray-400" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="font-semibold text-gray-900">{opt.carrier}</span>
+                                                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{opt.service}</span>
+                                                                        </div>
+                                                                        <span className="text-sm text-gray-500 block">Chega em {opt.days} dias úteis</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Right: Price & Check */}
+                                                                <div className="flex items-center gap-4">
+                                                                    <span className="font-bold text-lg text-gray-900">R$ {opt.price.toFixed(2)}</span>
+                                                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-black bg-black' : 'border-gray-300'
+                                                                        }`}>
+                                                                        {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Hidden Input */}
+                                                                <input
+                                                                    type="radio"
+                                                                    name="shipping"
+                                                                    className="hidden"
+                                                                    checked={!!isSelected}
+                                                                    onChange={() => { }}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Payment Method Selector Moved Here or Step 2? */}

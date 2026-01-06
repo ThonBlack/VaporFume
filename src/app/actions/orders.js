@@ -2,17 +2,20 @@
 
 import { db } from '@/lib/db';
 import { orders, orderItems, variants, products } from '@/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 /**
  * Busca todos os pedidos com paginação
  */
-export async function getOrders(page = 1, limit = 10) {
+export async function getOrders(page = 1, limit = 50) {
     const offset = (page - 1) * limit;
 
     const data = await db.query.orders.findMany({
-        orderBy: [desc(orders.createdAt)],
+        orderBy: [
+            sql`CASE WHEN status = 'pending' THEN 0 ELSE 1 END`,
+            desc(orders.createdAt)
+        ],
         limit: limit,
         offset: offset,
         with: {
@@ -20,10 +23,20 @@ export async function getOrders(page = 1, limit = 10) {
         }
     });
 
-    // Contagem total para paginação (opcional por enquanto, mas boa prática)
-    // const total = await db.select({ count: sql`count(*)` }).from(orders);
+    // Contagem total para paginação
+    const totalRes = await db.select({ count: sql`count(*)` }).from(orders);
+    const total = totalRes[0].count;
+    const totalPages = Math.ceil(total / limit);
 
-    return data;
+    return {
+        data,
+        meta: {
+            total,
+            page,
+            limit,
+            totalPages
+        }
+    };
 }
 
 /**
@@ -66,7 +79,9 @@ export async function createOrder(data) {
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         customerPhone: data.customerPhone,
+        address: data.address ? JSON.stringify(data.address) : null,
         total: data.total,
+        paymentMethod: data.paymentMethod || 'pix', // Default or from payload
         status: 'pending'
     }).returning({ id: orders.id });
 

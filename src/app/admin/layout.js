@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Package, ShoppingCart, DollarSign, LogOut, Settings, Monitor, FolderTree, Mail, Menu, X, Smartphone } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import WhatsAppStatusBadge from '@/components/WhatsAppStatusBadge';
 
 export default function AdminLayout({ children }) {
     const pathname = usePathname();
@@ -36,9 +37,10 @@ export default function AdminLayout({ children }) {
                 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
             `}>
                 <div className="mb-10 px-2 hidden md:block">
-                    <h2 className="text-2xl font-bold">
+                    <h2 className="text-2xl font-bold mb-4">
                         <span className="text-[var(--primary)]">Vapor</span>Admin
                     </h2>
+                    <WhatsAppStatusBadge />
                 </div>
 
                 <nav className="flex flex-col gap-2 flex-1 overflow-y-auto">

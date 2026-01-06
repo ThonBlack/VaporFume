@@ -38,8 +38,8 @@ export async function getDashboardStats() {
             .where(inArray(orderItems.orderId, paidOrderIds));
 
         totalCost = items.reduce((acc, item) => {
-            // Prefer historical cost, fallback to current cost, default to 0
-            const cost = (item.historicalCost !== null && item.historicalCost !== undefined)
+            // Prefer historical cost IF > 0, otherwise fallback to current cost
+            const cost = (item.historicalCost && item.historicalCost > 0)
                 ? item.historicalCost
                 : (item.currentCost || 0);
 

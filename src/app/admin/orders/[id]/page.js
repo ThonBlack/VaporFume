@@ -39,8 +39,15 @@ export default async function OrderDetailsPage({ params }) {
                         </p>
                     </div>
                     <div className="text-right">
-                        <span className="inline-block bg-amber-50 text-amber-600 border border-amber-100 text-xs px-3 py-1 rounded font-medium">
-                            Pagamento a combinar
+                        <span className={`inline-block text-xs px-3 py-1 rounded font-medium border ${order.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                            order.status === 'paid' ? 'bg-teal-50 text-teal-600 border-teal-100' :
+                                order.status === 'canceled' ? 'bg-red-50 text-red-600 border-red-100' :
+                                    'bg-blue-50 text-blue-600 border-blue-100'
+                            }`}>
+                            {order.status === 'completed' ? 'Concluído / Entregue' :
+                                order.status === 'paid' ? 'Pago (Aguardando Envio)' :
+                                    order.status === 'canceled' ? 'Cancelado' :
+                                        'Pendente / A Combinar'}
                         </span>
                     </div>
                 </div>
@@ -77,7 +84,7 @@ export default async function OrderDetailsPage({ params }) {
                     <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Dados do comprador</h3>
                     <div className="text-sm text-gray-600 space-y-1">
                         <p className="font-medium text-gray-900">{order.customerName}</p>
-                        <p>34984052289 <span className="text-blue-500 cursor-pointer">Chamar no whatsapp</span></p>
+                        <p>{order.customerPhone} <span className="text-blue-500 cursor-pointer">Chamar no whatsapp</span></p>
                         <p>{order.customerEmail}</p>
                     </div>
                 </div>
@@ -92,8 +99,13 @@ export default async function OrderDetailsPage({ params }) {
                 <div className="pt-6 border-t border-gray-100">
                     <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Endereço</h3>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                        Rua Honorato Pires França, 801, Ap 33 bloco a torre 3, Jardim do Lago, Uberaba - Mg<br />
-                        38081515
+                        {order.address ? (
+                            <>
+                                {JSON.parse(order.address).street}, {JSON.parse(order.address).number}<br />
+                                {JSON.parse(order.address).neighborhood} - {JSON.parse(order.address).city}<br />
+                                {JSON.parse(order.address).cep}
+                            </>
+                        ) : 'Endereço não informado'}
                     </p>
                 </div>
 
@@ -118,12 +130,12 @@ export default async function OrderDetailsPage({ params }) {
                     <h3 className="text-xs font-bold text-gray-900 mb-2">Opções</h3>
 
                     <a
-                        href={`https://wa.me/5534984052289?text=Olá ${order.customerName}, tudo bem? Sobre o seu pedido #${order.id}...`}
+                        href={`https://wa.me/55${order.customerPhone ? order.customerPhone.replace(/\D/g, '') : ''}?text=Olá ${order.customerName}, tudo bem? Sobre o seu pedido #${order.id}...`}
                         target="_blank"
                         className="flex items-center justify-center gap-2 w-full bg-gray-50 hover:bg-gray-100 text-gray-800 font-medium py-3 rounded-lg transition-colors border border-gray-200"
                     >
                         <div className="w-5 h-5 rounded-full border border-gray-800 flex items-center justify-center text-[10px]">W</div>
-                        Chamar no Whatsapp
+                        Chamar no Whatsapp ({order.customerPhone})
                     </a>
 
                     <Link
@@ -135,7 +147,7 @@ export default async function OrderDetailsPage({ params }) {
                         Imprimir Cupom
                     </Link>
 
-                    {/* Finalize Button */}
+                    {/* Finalize Button - Show if NOT completed (allow for 'paid' to complete) */}
                     {order.status !== 'completed' && (
                         <FinalizeOrderButton orderId={order.id} />
                     )}

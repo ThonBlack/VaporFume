@@ -80,6 +80,33 @@ async function startSock() {
         }
     });
 
+    // Listen for incoming messages to update last interaction
+    sock.ev.on('messages.upsert', async (m) => {
+        try {
+            const msg = m.messages[0];
+            if (!msg.key.fromMe && m.type === 'notify') {
+                const remoteJid = msg.key.remoteJid;
+                const phone = remoteJid.split('@')[0];
+                const now = new Date().toISOString();
+
+                // Update lastInteraction in customers table
+                // Since this worker uses raw SQL, we need to ensure table exists or fail gracefully
+                try {
+                    // Check if customer exists first
+                    const existing = db.prepare("SELECT id FROM customers WHERE phone = ?").get(phone);
+                    if (existing) {
+                        db.prepare("UPDATE customers SET last_interaction = ? WHERE phone = ?").run(now, phone);
+                        console.log(`Updated last_interaction for ${phone}`);
+                    }
+                } catch (err) {
+                    console.error('Error updating last_interaction:', err);
+                }
+            }
+        } catch (e) {
+            console.error('Error handling incoming msg:', e);
+        }
+    });
+
     sock.ev.on('creds.update', saveCreds);
 
     return sock;
@@ -89,35 +116,97 @@ async function startSock() {
 async function startQueueProcessor(sockPromise) {
     let sock = await sockPromise;
 
-    setInterval(async () => {
-        // If we lost connection, maybe wait or reload sock? 
-        // For now assume sock handles reconnects internally or via the event handler updates reference if we structured it differently.
-        // Actually, startSock returns a promise that resolves once. If it reconnects, the `sock` reference *might* need refreshing if the old one died completely.
-        // But Baileys usually keeps the event loop alive.
-        // Let's implement a simple check.
-
+    // Use while(true) to ensure strict sequential processing
+    // setInterval DOES NOT wait for async operations to complete
+    while (true) {
         try {
+            const nowObj = new Date();
+            const hour = nowObj.getHours();
+
+            // Strict Window: 09:00 to 17:00
+            if (hour < 9 || hour >= 17) {
+                await delay(60000); // Sleep 1 min if outside window
+                continue;
+            }
+
             const messages = getPendingMessages();
+
             if (messages.length > 0) {
                 const msg = messages[0];
-                console.log(`Sending to ${msg.phone}: ${msg.content.substring(0, 20)}...`);
 
-                // Format phone: 5567999999999 -> 5567999999999@s.whatsapp.net
-                const jid = msg.phone + '@s.whatsapp.net';
+                // --- Smart Win-back Check (Updated to 10 days) ---
+                if (msg.type && msg.type.startsWith('winback')) {
+                    try {
+                        const customer = db.prepare("SELECT last_interaction FROM customers WHERE phone = ?").get(msg.phone);
+                        if (customer && customer.last_interaction) {
+                            const lastInt = new Date(customer.last_interaction);
+                            const daysDiff = (nowObj - lastInt) / (1000 * 60 * 60 * 24);
 
-                await sock.sendMessage(jid, { text: msg.content });
+                            if (daysDiff < 10) {
+                                console.log(`Skipping Winback for ${msg.phone} (Interacted ${daysDiff.toFixed(1)} days ago)`);
+                                updateMessageStatus(msg.id, 'canceled');
+                                continue; // Skip to next iteration immediately (chk queue again)
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error checking winback interaction:', err);
+                    }
+                }
 
-                updateMessageStatus(msg.id, 'sent');
-                console.log(`Msg ${msg.id} SENT`);
+                // --- FORMATTING & VALIDATION ---
+                let cleanPhone = msg.phone.replace(/\D/g, '');
+                if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+                    cleanPhone = '55' + cleanPhone;
+                }
 
-                // Random delay between messages to be safe (5-15s)
-                // Since this loop runs fast, we use 'await delay' inside
-                await delay(Math.floor(Math.random() * 10000) + 5000);
+                const jid = cleanPhone + '@s.whatsapp.net';
+                console.log(`Processing Msg ${msg.id} to ${cleanPhone}...`);
+
+                // Check and Send
+                const [result] = await sock.onWhatsApp(jid);
+
+                if (result && result.exists) {
+                    await sock.sendMessage(result.jid, { text: msg.content });
+                    updateMessageStatus(msg.id, 'sent');
+                    console.log(`Msg ${msg.id} SENT to ${result.jid}`);
+                } else {
+                    console.error(`Number not found on WhatsApp: ${cleanPhone}`);
+                    updateMessageStatus(msg.id, 'failed');
+                }
+
+                // --- SMART DISTRIBUTED DELAY ---
+                const pendingCountFn = db.prepare("SELECT count(*) as count FROM message_queue WHERE status = 'pending'");
+                const pendingCount = pendingCountFn.get().count;
+
+                const flowEnd = new Date(nowObj);
+                flowEnd.setHours(17, 0, 0, 0);
+                let remainingMs = flowEnd.getTime() - Date.now();
+                if (remainingMs < 0) remainingMs = 0;
+
+                let calculatedDelay = 20000;
+                if (pendingCount > 0 && remainingMs > 0) {
+                    calculatedDelay = remainingMs / pendingCount;
+                }
+
+                const MIN_DELAY = 15000; // 15s absolute minimum
+                if (calculatedDelay < MIN_DELAY) calculatedDelay = MIN_DELAY;
+
+                // Jitter
+                const jitter = calculatedDelay * 0.1 * (Math.random() > 0.5 ? 1 : -1);
+                const finalDelay = Math.floor(calculatedDelay + jitter);
+
+                console.log(`Smart Delay: Pending=${pendingCount}, TimeLeft=${(remainingMs / 60000).toFixed(1)}m, Delay=${(finalDelay / 1000).toFixed(1)}s`);
+
+                await delay(finalDelay); // ACTUAL WAIT
+            } else {
+                // Empty queue, wait 5s before checking again
+                await delay(5000);
             }
         } catch (error) {
             console.error('Error processing queue:', error);
+            await delay(5000); // Safety backoff on crash
         }
-    }, 10000); // Check every 10 seconds
+    }
 }
 
 // Start

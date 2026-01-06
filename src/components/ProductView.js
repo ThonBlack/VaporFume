@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Header from '@/components/Header';
-import { Star, ArrowLeft, Truck, Lock, MessageCircle, Heart, Share2, Plus, Minus } from 'lucide-react';
+import { Star, ArrowLeft, Truck, Lock, MessageCircle, Heart, Share2, Plus, Minus, Bell } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import NotifyModal from '@/components/NotifyModal';

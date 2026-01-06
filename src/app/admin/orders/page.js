@@ -5,16 +5,20 @@ import DeleteOrderButton from '@/components/DeleteOrderButton';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminOrdersPage() {
-    const orders = await getOrders();
+export default async function AdminOrdersPage({ searchParams }) {
+    const page = parseInt(searchParams?.page || '1');
+    const loadLimit = 10;
+    const { data: orders, meta } = await getOrders(page, loadLimit);
 
     return (
         <div className="p-8 max-w-5xl mx-auto">
             {/* Header */}
-            <div className="mb-10">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Pedidos recebidos</h1>
-                <p className="text-gray-500 text-sm">Aqui são exibidos seus pedidos recebidos.</p>
-                <button className="mt-4 text-blue-500 text-sm font-medium hover:underline flex items-center gap-1">
+            <div className="mb-10 flex justify-between items-end">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Pedidos recebidos</h1>
+                    <p className="text-gray-500 text-sm">Página {meta.page} de {meta.totalPages} ({meta.total} pedidos)</p>
+                </div>
+                <button className="text-blue-500 text-sm font-medium hover:underline flex items-center gap-1">
                     <Plus className="w-4 h-4" /> Adicionar pedido
                 </button>
             </div>
@@ -41,13 +45,22 @@ export default async function AdminOrdersPage() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {/* Dot indicator */}
                                 <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'completed' ? 'bg-green-500' :
                                     order.status === 'pending' ? 'bg-blue-500' : 'bg-gray-300'
                                     }`}></div>
-                                <span className="text-xs font-medium text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                                    Pagamento a combinar
-                                </span>
+                                {order.status === 'completed' || order.status === 'paid' ? (
+                                    <span className="text-xs font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                                        Pago / Entregue
+                                    </span>
+                                ) : order.status === 'cancelled' ? (
+                                    <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                                        Cancelado
+                                    </span>
+                                ) : (
+                                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                                        Pendente / Fiado
+                                    </span>
+                                )}
                                 <DeleteOrderButton orderId={order.id} />
                             </div>
                         </div>
@@ -60,6 +73,31 @@ export default async function AdminOrdersPage() {
                     </div>
                 )}
             </div>
+
+            {/* Pagination Controls */}
+            {meta.totalPages > 1 && (
+                <div className="flex justify-center gap-4 mt-8">
+                    {page > 1 && (
+                        <a
+                            href={`/admin/orders?page=${page - 1}`}
+                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                        >
+                            Anterior
+                        </a>
+                    )}
+                    <span className="px-4 py-2 text-sm text-gray-500">
+                        {page} / {meta.totalPages}
+                    </span>
+                    {page < meta.totalPages && (
+                        <a
+                            href={`/admin/orders?page=${page + 1}`}
+                            className="px-4 py-2 border border-blue-600 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm font-bold transition-colors"
+                        >
+                            Próxima
+                        </a>
+                    )}
+                </div>
+            )}
         </div >
     );
 }

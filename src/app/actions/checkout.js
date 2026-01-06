@@ -17,6 +17,7 @@ export async function processCheckout(data) {
             customerName: data.customerName,
             customerEmail: data.customerEmail || 'nao_informado@email.com',
             customerPhone: data.customerPhone || '',
+            address: data.address,
             items: data.items,
             total: data.total,
             paymentMethod: data.paymentMethod
@@ -32,6 +33,7 @@ export async function processCheckout(data) {
                     amount: data.total,
                     email: data.customerEmail || 'client@vaporfume.com',
                     description: `Pedido #${orderId} - Vapor Fumê`,
+                    external_reference: String(orderId),
                     payer: {
                         first_name: data.customerName.split(' ')[0],
                         last_name: data.customerName.split(' ').slice(1).join(' ') || 'Cliente',

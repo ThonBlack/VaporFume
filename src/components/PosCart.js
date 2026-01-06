@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, Printer } from 'lucide-react'; // Ensure Printer is imported if used, or SVG as below
+import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode } from 'lucide-react';
+import CustomerAutocomplete from './CustomerAutocomplete';
 
 export default function PosCart({
     cart,
@@ -57,26 +58,32 @@ export default function PosCart({
             </div>
 
             <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-4">
-                <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Cliente (Opcional)</label>
-                    <input
-                        type="text"
-                        placeholder="Nome do cliente"
-                        className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                    />
-                </div>
+                <div className="space-y-3">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Cliente</label>
+                        <CustomerAutocomplete
+                            initialName={customerName}
+                            onSelect={(c) => {
+                                setCustomerName(c.name || '');
+                                setCustomerPhone(c.phone || c.customerPhone || '');
+                            }}
+                            onClear={() => {
+                                setCustomerName('');
+                                setCustomerPhone('');
+                            }}
+                        />
+                    </div>
 
-                <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Telefone (Opcional)</label>
-                    <input
-                        type="text"
-                        placeholder="(11) 99999-9999"
-                        className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                    />
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Telefone</label>
+                        <input
+                            type="text"
+                            placeholder="(11) 99999-9999"
+                            className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none bg-gray-100 text-gray-600 cursor-not-allowed"
+                            value={customerPhone}
+                            readOnly
+                        />
+                    </div>
                 </div>
 
                 <div>

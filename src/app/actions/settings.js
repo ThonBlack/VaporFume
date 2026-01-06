@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { settings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 /**
  * Get all settings as a key-value object
@@ -27,23 +29,23 @@ export async function updateSettings(data) {
         // Upsert logic manually since sqlite INSERT OR REPLACE can be tricky in specific ORM versions
         // Simple check: try update, if nothing updated, insert.
 
+        // Skip null values (or empty strings if desired, but form sends empty strings)
+        if (value === undefined || value === null) continue;
+
         const existing = await db.select().from(settings).where(eq(settings.key, key));
 
         if (existing.length > 0) {
             await db.update(settings)
-                .set({ value })
+                .set({ value: String(value) })
                 .where(eq(settings.key, key));
         } else {
-            await db.insert(settings).values({ key, value });
+            await db.insert(settings).values({ key, value: String(value) });
         }
     }
 
     revalidatePath('/admin/settings');
     revalidatePath('/checkout');
 }
-
-import fs from 'node:fs/promises';
-import path from 'node:path';
 
 export async function uploadBannerImage(formData) {
     const file = formData.get('file');
@@ -53,8 +55,14 @@ export async function uploadBannerImage(formData) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
     const filename = `banner-${Date.now()}${path.extname(file.name)}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+
+    // Configurable Upload Directory logic (Same as products.js)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const uploadDir = isProduction
+        ? '/var/www/vaporfume-uploads'
+        : path.join(process.cwd(), 'public', 'uploads');
 
     // Ensure dir exists
     await fs.mkdir(uploadDir, { recursive: true });

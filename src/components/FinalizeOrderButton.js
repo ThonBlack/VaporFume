@@ -32,7 +32,7 @@ export default function FinalizeOrderButton({ orderId }) {
             className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition-colors shadow-md mt-4 disabled:opacity-50"
         >
             {loading ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-            Finalizar (Pago e Entregue)
+            Confirmar Entrega (Finalizar)
         </button>
     );
 }

@@ -1,368 +1,441 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, MessageCircle, Send, Play, Pause, AlertTriangle, Download, Copy } from 'lucide-react';
+import { Mail, MessageCircle, Send, Play, Pause, AlertTriangle, Download, Copy, Users, Clock, Trash2, RefreshCw, Plus, X, Upload as UploadIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getCustomersForMarketing, getCustomersForEmail } from '@/app/actions/marketing';
+import { getLeads, getQueueStatus, addToQueue, removeFromQueue, importLeads, createCampaignBatch } from '@/app/actions/marketing';
+import * as XLSX from 'xlsx';
 
-export default function MarketingPage() {
-    const [activeTab, setActiveTab] = useState('whatsapp'); // whatsapp | email
-    const [whatsappCustomers, setWhatsappCustomers] = useState([]);
-    const [emailCustomers, setEmailCustomers] = useState([]);
-    const [message, setMessage] = useState('Olá [Nome], sentimos sua falta! Temos novidades na Vapor Fumê.');
-    const [emailSubject, setEmailSubject] = useState('Novidades da Vapor Fumê para você!');
-    const [emailBody, setEmailBody] = useState('Olá [Nome],\n\nConfira nossas novas ofertas exclusivas.\n\nAtenciosamente,\nVapor Fumê');
+export default function MarketingHub() {
+    const [activeTab, setActiveTab] = useState('queue'); // queue | leads | import
 
-    // WhatsApp Safety & Queue Settings
-    const [delaySeconds, setDelaySeconds] = useState(15);
-    const [isSending, setIsSending] = useState(false);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [paused, setPaused] = useState(false);
-    const [logs, setLogs] = useState([]);
+    // Data
+    const [leads, setLeads] = useState([]);
+    const [queue, setQueue] = useState({ items: [], stats: { pending: 0, sentToday: 0 } });
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Import State
+    const [importFile, setImportFile] = useState(null);
+    const [importTag, setImportTag] = useState('Planilha 01');
+    const [isImporting, setIsImporting] = useState(false);
+
+    // Manual Add State
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [manualPhone, setManualPhone] = useState('');
+    const [manualMsg, setManualMsg] = useState('');
 
     useEffect(() => {
         loadData();
+        const interval = setInterval(loadData, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     const loadData = async () => {
-        const [waData, emailData] = await Promise.all([
-            getCustomersForMarketing(),
-            getCustomersForEmail()
-        ]);
-        setWhatsappCustomers(waData);
-        setEmailCustomers(emailData);
-    };
-
-    // --- WhatsApp Logic ---
-    const handleStartQueue = () => {
-        if (!message) {
-            toast.error('Digite uma mensagem.');
-            return;
-        }
-        if (whatsappCustomers.length === 0) {
-            toast.error('Nenhum cliente com telefone encontrado.');
-            return;
-        }
-
-        const confirmStart = window.confirm(`ATENÇÃO: Isso abrirá ${whatsappCustomers.length} abas do WhatsApp Web sequencialmente a cada ${delaySeconds} segundos. Certifique-se de estar logado no WhatsApp Web.\n\nDeseja iniciar?`);
-
-        if (confirmStart) {
-            setIsSending(true);
-            setPaused(false);
-            setCurrentIndex(0);
-            setLogs(prev => [`[${new Date().toLocaleTimeString()}] Iniciando campanha WhatsApp para ${whatsappCustomers.length} contatos...`, ...prev]);
+        try {
+            const [leadsData, queueData] = await Promise.all([
+                getLeads(),
+                getQueueStatus()
+            ]);
+            setLeads(leadsData);
+            setQueue(queueData);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    useEffect(() => {
-        let timer;
-        if (isSending && !paused && currentIndex < whatsappCustomers.length) {
-            timer = setTimeout(() => {
-                sendNextMessage();
-            }, currentIndex === 0 ? 100 : delaySeconds * 1000); // 1st message immediate
-        } else if (currentIndex >= whatsappCustomers.length && isSending) {
-            setIsSending(false);
-            toast.success('Campanha Finalizada!');
-            setLogs(prev => [`[${new Date().toLocaleTimeString()}] Campanha finalizada com sucesso.`, ...prev]);
-        }
-        return () => clearTimeout(timer);
-    }, [isSending, paused, currentIndex, whatsappCustomers]);
+    const handleStrictDelete = async (id) => {
+        if (!confirm('Remover esta mensagem da fila?')) return;
 
-    const sendNextMessage = () => {
-        const customer = whatsappCustomers[currentIndex];
-        const personalizedMsg = message.replace('[Nome]', customer.name.split(' ')[0]);
-        const encodedMsg = encodeURIComponent(personalizedMsg);
-
-        // Open WhatsApp Link
-        const url = `https://web.whatsapp.com/send?phone=55${customer.phone}&text=${encodedMsg}`;
-        window.open(url, '_blank');
-
-        setLogs(prev => [`[${new Date().toLocaleTimeString()}] Enviado para ${customer.name} (${currentIndex + 1}/${whatsappCustomers.length})`, ...prev]);
-        setCurrentIndex(prev => prev + 1);
-    };
-
-    // --- Email Logic ---
-    const handleExportEmails = () => {
-        if (emailCustomers.length === 0) {
-            toast.error('Nenhum cliente com email encontrado.');
-            return;
-        }
-
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + "Nome,Email,Ultima Compra\n"
-            + emailCustomers.map(e => `${e.name},${e.email},${new Date(e.lastOrderDate).toLocaleDateString()}`).join("\n");
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "lista_emails_clientes.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        toast.success(`Lista de ${emailCustomers.length} emails exportada!`);
-    };
-
-    const handleCopyEmails = () => {
-        if (emailCustomers.length === 0) return;
-        const emails = emailCustomers.map(c => c.email).join(', ');
-        navigator.clipboard.writeText(emails);
-        toast.success('Emails copiados para a área de transferência!');
-    };
-
-    const handleSendTestEmail = () => {
-        toast.promise(
-            new Promise(resolve => setTimeout(resolve, 2000)),
-            {
-                loading: 'Simulando envio...',
-                success: 'Envio simulado com sucesso! (Nenhum email real foi enviado)',
-                error: 'Erro no envio'
+        try {
+            const res = await removeFromQueue(id);
+            if (res.success) {
+                toast.success('Removido!');
+                loadData();
+            } else {
+                toast.error('Erro ao remover');
             }
-        );
+        } catch (e) { toast.error('Erro'); }
     };
+
+    const handleManualAdd = async () => {
+        if (!manualPhone || !manualMsg) return toast.error('Preencha tudo');
+
+        try {
+            const res = await addToQueue({ phone: manualPhone, content: manualMsg });
+            if (res.success) {
+                toast.success('Adicionado à fila!');
+                setShowAddModal(false);
+                setManualPhone('');
+                setManualMsg('');
+                loadData();
+            } else {
+                toast.error('Erro ao adicionar');
+            }
+        } catch (e) { toast.error('Erro'); }
+    };
+
+    // ... inside MarketingHub
+
+    const handleImport = async () => {
+        if (!importFile) return toast.error('Selecione um arquivo');
+
+        setIsImporting(true);
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            try {
+                const data = e.target.result;
+                let csvContent = '';
+
+                // Check if it's Excel (binary) or CSV (text)
+                if (importFile.name.endsWith('.xlsx') || importFile.name.endsWith('.xls')) {
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    csvContent = XLSX.utils.sheet_to_csv(worksheet);
+                } else {
+                    csvContent = data; // Assume text/csv
+                }
+
+                const res = await importLeads(csvContent, importTag);
+                if (res.success) {
+                    toast.success(`Importado! ${res.count} novos, ${res.skipped} pulados.`);
+                    setImportFile(null);
+                    loadData();
+                    setActiveTab('leads');
+                } else {
+                    toast.error('Erro na importação');
+                }
+            } catch (err) {
+                console.error(err);
+                toast.error('Falha ao processar arquivo');
+            } finally {
+                setIsImporting(false);
+            }
+        };
+
+        if (importFile.name.endsWith('.xlsx') || importFile.name.endsWith('.xls')) {
+            reader.readAsArrayBuffer(importFile);
+        } else {
+            reader.readAsText(importFile);
+        }
+    };
+
+    const formatDate = (ts) => new Date(ts * 1000).toLocaleString('pt-BR');
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="mb-10 flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Campanhas de Marketing</h1>
-                    <p className="text-gray-500">Gerencie suas campanhas de engajamento via WhatsApp e Email.</p>
+        <div className="p-8 max-w-7xl mx-auto pb-20">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Automação & Marketing</h1>
+                <p className="text-gray-500">
+                    O sistema envia mensagens automáticas de Win-back (15/25/40 dias) e Reposição.
+                    Gerencie a fila abaixo.
+                </p>
+            </div>
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-gray-500 font-medium">Na Fila</p>
+                        <h3 className="text-2xl font-bold text-gray-900">{queue.stats.pending}</h3>
+                    </div>
+                    <div className="p-3 bg-yellow-50 text-yellow-600 rounded-xl">
+                        <Clock size={24} />
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-gray-500 font-medium">Enviados Hoje</p>
+                        <h3 className="text-2xl font-bold text-gray-900">{queue.stats.sentToday}</h3>
+                    </div>
+                    <div className="p-3 bg-green-50 text-green-600 rounded-xl">
+                        <Send size={24} />
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-gray-500 font-medium">Total de Leads</p>
+                        <h3 className="text-2xl font-bold text-gray-900">{leads.length}</h3>
+                    </div>
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <Users size={24} />
+                    </div>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 mb-8 border-b border-gray-200">
-                <button
-                    onClick={() => setActiveTab('whatsapp')}
-                    className={`pb-4 px-4 font-medium transition-colors relative ${activeTab === 'whatsapp' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    <div className="flex items-center gap-2">
-                        <MessageCircle className="w-5 h-5" />
-                        WhatsApp
-                    </div>
-                    {activeTab === 'whatsapp' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-600 rounded-t-full"></div>}
-                </button>
-                <button
-                    onClick={() => setActiveTab('email')}
-                    className={`pb-4 px-4 font-medium transition-colors relative ${activeTab === 'email' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    <div className="flex items-center gap-2">
-                        <Mail className="w-5 h-5" />
-                        Email Marketing
-                    </div>
-                    {activeTab === 'email' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full"></div>}
-                </button>
+            <div className="flex gap-4 mb-6 border-b border-gray-200">
+                {['queue', 'leads', 'import'].map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`pb-4 px-4 font-bold capitalize transition-all relative ${activeTab === tab ? 'text-black' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        {tab === 'leads' ? 'Base de Leads' : tab === 'queue' ? 'Fila de Disparo (WhatsApp)' : 'Importar Planilha'}
+                        {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black rounded-t-full"></div>}
+                    </button>
+                ))}
             </div>
 
-            {activeTab === 'whatsapp' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left: Configuration */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <span className="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs">1</span>
-                                Configuração da Mensagem
-                            </h3>
-
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-                                <textarea
-                                    rows={4}
-                                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all resize-none font-sans"
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                />
-                                <p className="text-xs text-gray-400 mt-2">Variáveis: [Nome] será substituído pelo primeiro nome do cliente.</p>
-                            </div>
-
-                            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100 flex gap-3">
-                                <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                                <div className="text-xs text-yellow-800">
-                                    <strong>Segurança Anti-Bloqueio:</strong> Configure um intervalo seguro (sugerimos 30s+).
-                                    O sistema abrirá uma nova aba para cada cliente. Não feche esta tela enquanto roda.
-                                </div>
-                            </div>
+            {/* QUEUE TAB */}
+            {activeTab === 'queue' && (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="font-bold text-lg">Fila de Mensagens</h3>
+                            <p className="text-xs text-gray-400">Mensagens automáticas são agendadas para 09:00 - 17:00</p>
                         </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800">
+                                <Plus size={16} /> Adicionar Manualmente
+                            </button>
+                            <button onClick={loadData} className="p-2 hover:bg-gray-100 rounded-lg"><RefreshCw size={18} /></button>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                                <tr>
+                                    <th className="p-4">Status</th>
+                                    <th className="p-4">Tipo</th>
+                                    <th className="p-4">Agendado Para</th>
+                                    <th className="p-4">Destino</th>
+                                    <th className="p-4">Conteúdo</th>
+                                    <th className="p-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {queue.items.length === 0 ? (
+                                    <tr><td colSpan="6" className="p-8 text-center text-gray-400">Fila vazia</td></tr>
+                                ) : (
+                                    queue.items.map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                    item.status === 'sent' ? 'bg-green-100 text-green-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    {item.status === 'pending' ? 'Pendente' : item.status === 'sent' ? 'Enviado' : 'Falha'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="text-gray-600 text-xs font-mono bg-gray-100 px-2 py-1 rounded border">
+                                                    {item.type}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 font-mono text-gray-600">
+                                                {formatDate(item.scheduledAt)}
+                                            </td>
+                                            <td className="p-4 font-mono text-gray-900">{item.phone}</td>
+                                            <td className="p-4 text-gray-500 max-w-xs truncate" title={item.content}>
+                                                {item.content}
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                {item.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleStrictDelete(item.id)}
+                                                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                    <span className="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs">2</span>
-                                    Execução
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                    <label className="text-sm text-gray-600">Intervalo (segundos):</label>
+            {/* LEADS TAB */}
+            {activeTab === 'leads' && (
+                <div className="space-y-6">
+                    {/* CAMPAIGN RUNNER */}
+                    <div className="bg-gradient-to-br from-gray-900 to-black text-white p-6 rounded-2xl shadow-lg">
+                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                            <Send size={20} /> Disparar Campanha (Planilha)
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Mensagem</label>
+                                <textarea
+                                    value={manualMsg}
+                                    onChange={e => setManualMsg(e.target.value)}
+                                    className="w-full h-32 bg-gray-800 border-gray-700 rounded-xl p-3 text-sm focus:border-white transition-colors text-white"
+                                    placeholder="Olá {nome}, confira nossas ofertas..."
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Variáveis disponíveis: <code>{'{primeiro_nome}'}</code>, <code>{'{nome_completo}'}</code>
+                                </p>
+                            </div>
+                            <div className="flex flex-col justify-between">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Contatos Disponíveis</label>
+                                    <div className="text-3xl font-bold mb-1">
+                                        {leads.filter(l => l.sources.includes('Planilha') && (!l.lastCampaignAt || l.lastCampaignAt === null)).length}
+                                    </div>
+                                    <p className="text-xs text-gray-400 mb-4">Clientes da planilha que ainda não receberam campanha.</p>
+
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Quantidade p/ Enviar Agora</label>
                                     <input
                                         type="number"
-                                        value={delaySeconds}
-                                        onChange={e => setDelaySeconds(parseInt(e.target.value))}
-                                        className="w-20 p-2 border border-gray-200 rounded-lg text-center font-bold"
-                                        min="5"
+                                        defaultValue={50}
+                                        id="batchSize"
+                                        className="w-full bg-gray-800 border-gray-700 rounded-xl p-3 text-white font-mono font-bold"
                                     />
                                 </div>
+                                <button
+                                    onClick={async () => {
+                                        const batchSize = document.getElementById('batchSize').value;
+                                        if (!manualMsg) return toast.error('Escreva uma mensagem!');
+
+                                        const res = await createCampaignBatch(manualMsg, parseInt(batchSize));
+                                        if (res.success) {
+                                            toast.success(`${res.count} mensagens agendadas!`);
+                                            loadData();
+                                        } else {
+                                            toast.error(res.message || 'Erro');
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors mt-4"
+                                >
+                                    Enviar Lote
+                                </button>
                             </div>
-
-                            <div className="flex gap-4">
-                                {!isSending ? (
-                                    <button
-                                        onClick={handleStartQueue}
-                                        className="flex-1 bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Play className="w-5 h-5" /> Iniciar Disparo
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => setPaused(!paused)}
-                                        className={`flex-1 ${paused ? 'bg-blue-600' : 'bg-yellow-500'} text-white py-4 rounded-xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2`}
-                                    >
-                                        {paused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-                                        {paused ? 'Retomar' : 'Pausar'}
-                                    </button>
-                                )}
-
-                                {isSending && (
-                                    <button onClick={() => { setIsSending(false); setCurrentIndex(0); }} className="p-4 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200">
-                                        Cancelar
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Progress Bar */}
-                            {isSending && (
-                                <div className="mt-6">
-                                    <div className="flex justify-between text-sm mb-2 text-gray-600">
-                                        <span>Progresso: {currentIndex} / {whatsappCustomers.length}</span>
-                                        <span>{Math.round((currentIndex / whatsappCustomers.length) * 100)}%</span>
-                                    </div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                        <div
-                                            className="bg-green-500 h-full transition-all duration-500"
-                                            style={{ width: `${(currentIndex / whatsappCustomers.length) * 100}%` }}
-                                        ></div>
-                                    </div>
-                                    {!paused && currentIndex < whatsappCustomers.length && (
-                                        <p className="text-center text-xs text-gray-400 mt-2 animate-pulse">
-                                            Próximo envio em {delaySeconds}s...
-                                        </p>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
-                    {/* Right: Lists & Logs */}
-                    <div className="lg:col-span-1 space-y-6">
-                        {/* Audience List */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-h-[300px] overflow-y-auto">
-                            <h3 className="font-semibold text-gray-900 mb-4 sticky top-0 bg-white pb-2 border-b">
-                                Lista de Envio ({whatsappCustomers.length})
-                            </h3>
-                            {whatsappCustomers.length === 0 ? (
-                                <p className="text-gray-400 text-sm">Nenhum cliente com telefone encontrado.</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {whatsappCustomers.map((c, i) => (
-                                        <div key={i} className={`flex justify-between items-center text-sm p-2 rounded ${i === currentIndex && isSending ? 'bg-green-50 border border-green-200' : ''}`}>
-                                            <div>
-                                                <p className="font-medium text-gray-800">{c.name}</p>
-                                                <p className="text-xs text-gray-400">{c.phone}</p>
-                                            </div>
-                                            {i < currentIndex && <span className="text-green-600 text-xs font-bold">Enviado</span>}
-                                            {i === currentIndex && isSending && <span className="text-blue-600 text-xs font-bold">Enviando...</span>}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="font-bold text-lg">Base de Contatos ({leads.length})</h3>
                         </div>
-
-                        {/* Logs */}
-                        <div className="bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-800 h-[300px] overflow-y-auto font-mono text-xs">
-                            <h3 className="font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-900 pb-2 border-b border-gray-800">
-                                Log de Execução
-                            </h3>
-                            <div className="space-y-1">
-                                {logs.length === 0 && <p className="text-gray-600 italic">Aguardando início...</p>}
-                                {logs.map((log, i) => (
-                                    <p key={i} className="text-green-400">{log}</p>
-                                ))}
-                            </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                                    <tr>
+                                        <th className="p-4">Nome</th>
+                                        <th className="p-4">Telefone</th>
+                                        <th className="p-4">Origem</th>
+                                        <th className="p-4">Última Atividade</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {leads.map((lead, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="p-4 font-medium text-gray-900">{lead.name}</td>
+                                            <td className="p-4 text-gray-600">{lead.phone}</td>
+                                            <td className="p-4">
+                                                <div className="flex gap-1">
+                                                    {lead.sources.map(s => (
+                                                        <span key={s} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs border border-gray-200">{s}</span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-gray-400">
+                                                {new Date(lead.lastActive).toLocaleDateString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h3 className="font-semibold text-gray-900 mb-4">Compor Email</h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Assunto</label>
-                                    <input
-                                        type="text"
-                                        className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
-                                        value={emailSubject}
-                                        onChange={(e) => setEmailSubject(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Corpo do Email</label>
-                                    <textarea
-                                        rows={8}
-                                        className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-blue-500 resize-none"
-                                        value={emailBody}
-                                        onChange={(e) => setEmailBody(e.target.value)}
-                                    />
-                                    <p className="text-xs text-gray-400 mt-2">Suporte a texto simples. Para HTML avançado, utilize uma ferramenta externa com nossa lista de exportação.</p>
-                                </div>
-                            </div>
-                        </div>
+            )}
 
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h3 className="font-semibold text-gray-900 mb-4">Ações de Disparo</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button
-                                    onClick={handleSendTestEmail}
-                                    className="p-4 border border-blue-600 text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Send className="w-5 h-5" /> Simular Envio (Teste)
-                                </button>
-                                <button
-                                    onClick={handleExportEmails}
-                                    className="p-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Download className="w-5 h-5" /> Exportar Lista (CSV)
-                                </button>
-                            </div>
-                            <p className="text-xs text-gray-400 mt-4 text-center">
-                                Nota: Para envios em massa reais, recomendamos exportar a lista e usar serviços como Mailchimp, Resend ou Brevo para garantir entregabilidade.
-                            </p>
+            {/* IMPORT TAB */}
+            {activeTab === 'import' && (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 max-w-xl mx-auto text-center">
+                    <div className="mb-6">
+                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <UploadIcon size={32} />
                         </div>
+                        <h3 className="text-xl font-bold mb-2">Importar Contatos (CSV)</h3>
+                        <p className="text-gray-500 text-sm">
+                            Envie um arquivo <b>.csv</b> contendo <code>Nome, Telefone</code>.<br />
+                            O sistema ignorará duplicados automaticamente.
+                        </p>
                     </div>
 
-                    <div className="lg:col-span-1">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                <h3 className="font-semibold text-gray-900">Público Alvo ({emailCustomers.length})</h3>
-                                <button onClick={handleCopyEmails} title="Copiar todos" className="text-gray-400 hover:text-blue-600">
-                                    <Copy className="w-4 h-4" />
-                                </button>
+                    <div className="space-y-4 text-left">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Identificação (Tag)</label>
+                            <input
+                                value={importTag}
+                                onChange={e => setImportTag(e.target.value)}
+                                className="w-full p-3 border border-gray-200 rounded-xl"
+                                placeholder="Ex: Lista Vip Setembro"
+                            />
+                        </div>
+
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 hover:border-black transition-colors cursor-pointer relative">
+                            <input
+                                type="file"
+                                accept=".csv, .xlsx, .xls"
+                                onChange={e => setImportFile(e.target.files[0])}
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                            />
+                            <div className="text-center">
+                                <p className="font-bold text-gray-900">
+                                    {importFile ? importFile.name : 'Clique para selecionar arquivo'}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">Apenas arquivos .csv</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleImport}
+                            disabled={isImporting || !importFile}
+                            className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                            {isImporting ? <RefreshCw className="animate-spin" /> : <UploadIcon />}
+                            {isImporting ? 'Processando...' : 'Iniciar Importação'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg">Adicionar Mensagem Manual</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Telefone (DD 9...)</label>
+                                <input
+                                    value={manualPhone}
+                                    onChange={e => setManualPhone(e.target.value)}
+                                    className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-black"
+                                    placeholder="Ex: 67999999999"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Mensagem</label>
+                                <textarea
+                                    rows={4}
+                                    value={manualMsg}
+                                    onChange={e => setManualMsg(e.target.value)}
+                                    className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-black resize-none"
+                                    placeholder="Digite a mensagem..."
+                                />
                             </div>
 
-                            {emailCustomers.length === 0 ? (
-                                <p className="text-gray-400 text-sm">Nenhum email cadastrado.</p>
-                            ) : (
-                                <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                                    {emailCustomers.map((c, i) => (
-                                        <div key={i} className="flex justify-between items-center text-sm p-2 hover:bg-gray-50 rounded">
-                                            <div>
-                                                <p className="font-medium text-gray-800">{c.name}</p>
-                                                <p className="text-xs text-gray-500">{c.email}</p>
-                                            </div>
-                                            <span className="text-xs text-gray-400">{new Date(c.lastOrderDate).toLocaleDateString()}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            <button
+                                onClick={handleManualAdd}
+                                className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors"
+                            >
+                                Adicionar à Fila
+                            </button>
                         </div>
                     </div>
                 </div>

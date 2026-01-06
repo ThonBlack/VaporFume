@@ -2,8 +2,36 @@
 
 import { db } from '@/lib/db';
 import { customers } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, like, or } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+
+/**
+ * Search customers by name or phone (POS Autocomplete)
+ */
+export async function searchCustomers(query) {
+    if (!query || query.length < 2) return [];
+
+    try {
+        const results = await db.select({
+            id: customers.id,
+            name: customers.name,
+            phone: customers.phone,
+            customerPhone: customers.customerPhone
+        })
+            .from(customers)
+            .where(or(
+                like(customers.name, `%${query}%`),
+                like(customers.phone, `%${query}%`),
+                like(customers.customerPhone, `%${query}%`)
+            ))
+            .limit(10);
+
+        return results;
+    } catch (error) {
+        console.error('Search error:', error);
+        return [];
+    }
+}
 
 /**
  * Register a new customer
