@@ -44,6 +44,86 @@ export default async function AdminDashboard() {
                 />
             </div>
 
+            {/* Sales Chart + Low Stock Alert Row */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '24px',
+                marginBottom: '40px'
+            }}>
+                {/* Sales Chart */}
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '20px', color: '#111' }}>
+                        Vendas - Últimos 7 dias
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'end', gap: '8px', height: '150px' }}>
+                        {stats.salesByDay?.map((day, i) => {
+                            const maxTotal = Math.max(...stats.salesByDay.map(d => d.total), 1);
+                            const height = (day.total / maxTotal) * 100;
+                            return (
+                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#666', fontWeight: '600' }}>
+                                        {day.total > 0 ? `R$${day.total.toFixed(0)}` : '-'}
+                                    </span>
+                                    <div style={{
+                                        width: '100%',
+                                        height: `${Math.max(height, 5)}%`,
+                                        background: day.total > 0 ? 'linear-gradient(to top, #3b82f6, #60a5fa)' : '#e5e7eb',
+                                        borderRadius: '6px 6px 0 0',
+                                        transition: 'height 0.3s ease'
+                                    }} />
+                                    <span style={{ fontSize: '0.65rem', color: '#888' }}>{day.date}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Low Stock Alert */}
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111' }}>
+                            ⚠️ Estoque Baixo
+                        </h3>
+                        <span style={{
+                            background: stats.lowStock?.length > 0 ? '#fef3c7' : '#dcfce7',
+                            color: stats.lowStock?.length > 0 ? '#d97706' : '#166534',
+                            padding: '4px 12px',
+                            borderRadius: '99px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                        }}>
+                            {stats.lowStock?.length || 0} itens
+                        </span>
+                    </div>
+                    <div style={{ maxHeight: '140px', overflowY: 'auto' }}>
+                        {stats.lowStock?.length === 0 ? (
+                            <p style={{ color: '#888', fontSize: '0.9rem' }}>Nenhum item com estoque baixo 👍</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {stats.lowStock?.slice(0, 5).map((item, i) => (
+                                    <div key={i} style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        padding: '8px 12px',
+                                        background: '#fef3c7',
+                                        borderRadius: '8px'
+                                    }}>
+                                        <span style={{ fontSize: '0.85rem', color: '#92400e' }}>
+                                            {item.productName} - {item.name}
+                                        </span>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#d97706' }}>
+                                            {item.stock} un
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Recent Orders */}
             <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                 <div className="flex justify-between items-center mb-6">

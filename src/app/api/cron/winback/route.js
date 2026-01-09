@@ -12,6 +12,11 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Block Sunday
+    if (new Date().getDay() === 0) {
+        return NextResponse.json({ success: true, message: 'Domingo - pausado', count: 0 });
+    }
+
     try {
         const now = new Date();
         const pendingMessages = [];

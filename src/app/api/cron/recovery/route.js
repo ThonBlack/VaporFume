@@ -16,6 +16,11 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Block Sunday
+    if (new Date().getDay() === 0) {
+        return NextResponse.json({ success: true, message: 'Domingo - pausado', processedCount: 0 });
+    }
+
     try {
         const now = new Date();
         const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000).toISOString();

@@ -56,12 +56,44 @@ export async function getDashboardStats() {
         orderBy: [desc(orders.createdAt)],
     });
 
+    // 6. Sales by Day (Last 7 days) for Chart
+    const salesByDay = [];
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayStart = new Date(date.setHours(0, 0, 0, 0)).toISOString();
+        const dayEnd = new Date(date.setHours(23, 59, 59, 999)).toISOString();
+
+        const dayOrders = paidOrders.filter(o =>
+            o.createdAt >= dayStart && o.createdAt <= dayEnd
+        );
+
+        salesByDay.push({
+            date: new Date(date).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' }),
+            total: dayOrders.reduce((acc, o) => acc + o.total, 0),
+            count: dayOrders.length
+        });
+    }
+
+    // 7. Low Stock Alert (variants with stock <= 5)
+    const allVariants = await db.select({
+        name: variants.name,
+        stock: variants.stock,
+        productName: products.name
+    })
+        .from(variants)
+        .leftJoin(products, eq(variants.productId, products.id));
+
+    const lowStockItems = allVariants.filter(v => v.stock > 0 && v.stock <= 5);
+
     return {
         revenue: totalRevenue,
         pending: pendingCount,
         products: productCount,
         profit: netProfit,
         margin: margin,
-        recent: recentOrders
+        recent: recentOrders,
+        salesByDay,
+        lowStock: lowStockItems
     };
 }

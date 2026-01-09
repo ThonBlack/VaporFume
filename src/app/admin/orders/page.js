@@ -2,6 +2,7 @@ import { getOrders } from '@/app/actions/orders';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import DeleteOrderButton from '@/components/DeleteOrderButton';
+import ExportOrdersButton from '@/components/ExportOrdersButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +19,12 @@ export default async function AdminOrdersPage({ searchParams }) {
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Pedidos recebidos</h1>
                     <p className="text-gray-500 text-sm">Página {meta.page} de {meta.totalPages} ({meta.total} pedidos)</p>
                 </div>
-                <button className="text-blue-500 text-sm font-medium hover:underline flex items-center gap-1">
-                    <Plus className="w-4 h-4" /> Adicionar pedido
-                </button>
+                <div className="flex items-center gap-3">
+                    <ExportOrdersButton />
+                    <button className="text-blue-500 text-sm font-medium hover:underline flex items-center gap-1">
+                        <Plus className="w-4 h-4" /> Adicionar pedido
+                    </button>
+                </div>
             </div>
 
             {/* List */}
