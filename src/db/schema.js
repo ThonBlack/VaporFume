@@ -173,3 +173,25 @@ export const coupons = sqliteTable('coupons', {
     createdAt: text('created_at').default(new Date().toISOString()),
 });
 
+// === API KEYS ===
+export const apiKeys = sqliteTable('api_keys', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    key: text('key').notNull().unique(),
+    name: text('name').notNull(),
+    tenantId: integer('tenant_id').references(() => tenants.id),
+    lastUsedAt: text('last_used_at'),
+    active: integer('active').default(1),
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
+
+// === WEBHOOKS ===
+export const webhooks = sqliteTable('webhooks', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    url: text('url').notNull(),
+    events: text('events'), // JSON array: ["order.created", "order.paid"]
+    secret: text('secret'),
+    active: integer('active').default(1),
+    tenantId: integer('tenant_id').references(() => tenants.id),
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
+
