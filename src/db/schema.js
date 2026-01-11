@@ -158,4 +158,18 @@ export const customers = sqliteTable('customers', {
     createdAt: text('created_at').default(new Date().toISOString()),
 });
 
+// === COUPONS ===
+export const coupons = sqliteTable('coupons', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    code: text('code').notNull().unique(),
+    type: text('type').notNull().default('percent'), // 'percent' ou 'fixed'
+    value: real('value').notNull(), // 10 = 10% ou R$10
+    minOrderValue: real('min_order_value').default(0),
+    maxUses: integer('max_uses'),
+    usedCount: integer('used_count').default(0),
+    expiresAt: text('expires_at'),
+    active: integer('active').default(1),
+    tenantId: integer('tenant_id').references(() => tenants.id),
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
 

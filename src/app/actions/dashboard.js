@@ -86,6 +86,54 @@ export async function getDashboardStats() {
 
     const lowStockItems = allVariants.filter(v => v.stock > 0 && v.stock <= 5);
 
+    // 8. Average Ticket (Ticket Médio)
+    const avgTicket = paidOrders.length > 0
+        ? totalRevenue / paidOrders.length
+        : 0;
+
+    // 9. Top 5 Products (Mais Vendidos)
+    const topProductsMap = {};
+    if (paidOrderIds.length > 0) {
+        const allItems = await db.select({
+            productName: orderItems.productName,
+            quantity: orderItems.quantity,
+            total: sql`${orderItems.price} * ${orderItems.quantity}`
+        })
+            .from(orderItems)
+            .where(inArray(orderItems.orderId, paidOrderIds));
+
+        for (const item of allItems) {
+            const name = item.productName || 'Produto sem nome';
+            if (!topProductsMap[name]) {
+                topProductsMap[name] = { name, quantity: 0, total: 0 };
+            }
+            topProductsMap[name].quantity += item.quantity;
+            topProductsMap[name].total += item.total || 0;
+        }
+    }
+    const topProducts = Object.values(topProductsMap)
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+    // 10. Top 5 Customers (Clientes por Valor)
+    const topCustomersMap = {};
+    for (const order of paidOrders) {
+        const phone = order.customerPhone || order.customerName || 'Anônimo';
+        if (!topCustomersMap[phone]) {
+            topCustomersMap[phone] = {
+                name: order.customerName || 'Anônimo',
+                phone: order.customerPhone,
+                orders: 0,
+                total: 0
+            };
+        }
+        topCustomersMap[phone].orders += 1;
+        topCustomersMap[phone].total += order.total;
+    }
+    const topCustomers = Object.values(topCustomersMap)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
     return {
         revenue: totalRevenue,
         pending: pendingCount,
@@ -94,6 +142,10 @@ export async function getDashboardStats() {
         margin: margin,
         recent: recentOrders,
         salesByDay,
-        lowStock: lowStockItems
+        lowStock: lowStockItems,
+        avgTicket,
+        topProducts,
+        topCustomers,
+        totalOrders: paidOrders.length
     };
 }

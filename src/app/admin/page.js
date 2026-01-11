@@ -11,18 +11,23 @@ export default async function AdminDashboard() {
                 Visão Geral
             </h1>
 
-            {/* Stats Grid */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '24px',
                 marginBottom: '40px'
             }}>
                 <StatCard
                     title="Faturamento (Pago)"
                     value={`R$ ${stats.revenue.toFixed(2)}`}
-                    trend={`Lucro Líquido: R$ ${stats.profit.toFixed(2)}`}
+                    trend={`Lucro: R$ ${stats.profit.toFixed(2)}`}
                     icon={<DollarSign size={24} color="#166534" />}
+                />
+                <StatCard
+                    title="Ticket Médio"
+                    value={`R$ ${stats.avgTicket?.toFixed(2) || '0.00'}`}
+                    trend={`${stats.totalOrders || 0} pedidos pagos`}
+                    icon={<TrendingUp size={24} color="#8b5cf6" />}
                 />
                 <StatCard
                     title="Margem de Lucro"
@@ -37,9 +42,9 @@ export default async function AdminDashboard() {
                     icon={<ShoppingBag size={24} color="#f59e0b" />}
                 />
                 <StatCard
-                    title="Produtos Cadastrados"
+                    title="Produtos"
                     value={stats.products}
-                    trend="Total em Loja"
+                    trend="Cadastrados"
                     icon={<Package size={24} color="#3b82f6" />}
                 />
             </div>
@@ -119,6 +124,76 @@ export default async function AdminDashboard() {
                                     </div>
                                 ))}
                             </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Top Products + Top Customers Row */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '24px',
+                marginBottom: '40px'
+            }}>
+                {/* Top Products */}
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '16px', color: '#111' }}>
+                        🏆 Top 5 Produtos
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {stats.topProducts?.length === 0 ? (
+                            <p style={{ color: '#888', fontSize: '0.9rem' }}>Nenhuma venda ainda</p>
+                        ) : (
+                            stats.topProducts?.map((prod, i) => (
+                                <div key={i} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    background: '#f8fafc',
+                                    borderRadius: '8px'
+                                }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                                        <span style={{ fontWeight: '700', marginRight: '8px' }}>#{i + 1}</span>
+                                        {prod.name?.substring(0, 25)}{prod.name?.length > 25 ? '...' : ''}
+                                    </span>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#3b82f6' }}>
+                                        {prod.quantity} un
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* Top Customers */}
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '16px', color: '#111' }}>
+                        👑 Top 5 Clientes
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {stats.topCustomers?.length === 0 ? (
+                            <p style={{ color: '#888', fontSize: '0.9rem' }}>Nenhuma venda ainda</p>
+                        ) : (
+                            stats.topCustomers?.map((cust, i) => (
+                                <div key={i} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    background: '#f8fafc',
+                                    borderRadius: '8px'
+                                }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                                        <span style={{ fontWeight: '700', marginRight: '8px' }}>#{i + 1}</span>
+                                        {cust.name?.substring(0, 20)}{cust.name?.length > 20 ? '...' : ''}
+                                    </span>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#10b981' }}>
+                                        R$ {cust.total?.toFixed(2)}
+                                    </span>
+                                </div>
+                            ))
                         )}
                     </div>
                 </div>
