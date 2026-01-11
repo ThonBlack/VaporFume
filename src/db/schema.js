@@ -1,15 +1,38 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
+// === MULTI-TENANT ===
+export const tenants = sqliteTable('tenants', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    slug: text('slug').notNull().unique(),
+    name: text('name').notNull(),
+    // Visual Customization
+    logo: text('logo'),
+    favicon: text('favicon'),
+    primaryColor: text('primary_color').default('#000000'),
+    secondaryColor: text('secondary_color').default('#3b82f6'),
+    backgroundColor: text('background_color').default('#ffffff'),
+    // Message Templates
+    msgRecovery: text('msg_recovery'),
+    msgWinback15: text('msg_winback_15'),
+    msgWinback30: text('msg_winback_30'),
+    msgWinback45: text('msg_winback_45'),
+    msgRestock: text('msg_restock'),
+    // Meta
+    createdAt: text('created_at').default(new Date().toISOString()),
+});
+
 export const categories = sqliteTable('categories', {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     slug: text('slug').notNull().unique(),
+    tenantId: integer('tenant_id').references(() => tenants.id),
 });
 
 export const settings = sqliteTable('settings', {
     key: text('key').primaryKey(),
     value: text('value'),
+    tenantId: integer('tenant_id').references(() => tenants.id),
 });
 
 export const products = sqliteTable('products', {
@@ -28,6 +51,7 @@ export const products = sqliteTable('products', {
     linkedProductId: integer('linked_product_id'), // If set, this product allows selecting variants from the linked product
     bundleSize: integer('bundle_size').default(1), // How many variants to select (e.g. 3 for "Kit 3")
     images: text('images'), // JSON array of additional image paths
+    tenantId: integer('tenant_id').references(() => tenants.id),
 });
 
 export const variants = sqliteTable('variants', {
@@ -50,6 +74,7 @@ export const orders = sqliteTable('orders', {
     recoveryStatus: text('recovery_status').default('none'), // none, sent, converted, failed
     recoverySentAt: text('recovery_sent_at'),
     createdAt: text('created_at').default(new Date().toISOString()),
+    tenantId: integer('tenant_id').references(() => tenants.id),
 });
 
 export const orderItems = sqliteTable('order_items', {
