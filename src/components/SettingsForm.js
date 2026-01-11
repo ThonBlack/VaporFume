@@ -12,7 +12,8 @@ export default function SettingsForm({ initialSettings }) {
         mercadopago_access_token: initialSettings.mercadopago_access_token || '',
         melhor_envio_token: initialSettings.melhor_envio_token || '',
         melhor_envio_sandbox: initialSettings.melhor_envio_sandbox || 'false',
-        whatsapp_number: initialSettings.whatsapp_number || ''
+        whatsapp_number: initialSettings.whatsapp_number || '',
+        zap_entregas_api_key: initialSettings.zap_entregas_api_key || ''
     });
 
     const handleChange = (e) => {
@@ -269,6 +270,29 @@ export default function SettingsForm({ initialSettings }) {
                         />
                         <p className="text-xs text-gray-500 mt-2">
                             Inclua o código do país (55) e DDD. Ex: 5511999999999.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Zap Entregas */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-orange-500" /> Zap Entregas (Motoboys)
+                </h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                        <input
+                            type="password"
+                            name="zap_entregas_api_key"
+                            value={formData.zap_entregas_api_key}
+                            onChange={handleChange}
+                            placeholder="apikey_1_11999999999"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                            Entre em contato com o Zap Entregas para obter sua chave de API.
                         </p>
                     </div>
                 </div>

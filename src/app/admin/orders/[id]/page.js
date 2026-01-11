@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, MessageCircle, Printer, XCircle, Instagram, CheckCircle2 } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import FinalizeOrderButton from '@/components/FinalizeOrderButton';
+import SendDeliveryButton from '@/components/SendDeliveryButton';
 
 export default async function OrderDetailsPage({ params }) {
     const { id } = await params;
@@ -137,6 +138,11 @@ export default async function OrderDetailsPage({ params }) {
                         <div className="w-5 h-5 rounded-full border border-gray-800 flex items-center justify-center text-[10px]">W</div>
                         Chamar no Whatsapp ({order.customerPhone})
                     </a>
+
+                    <SendDeliveryButton
+                        orderId={order.id}
+                        printUrl={`/admin/orders/${order.id}/print`}
+                    />
 
                     <Link
                         href={`/admin/orders/${order.id}/print`}
