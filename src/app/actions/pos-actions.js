@@ -14,13 +14,9 @@ export async function submitPosOrder(data) {
             customerName: data.customerName,
             customerEmail: data.customerEmail,
             customerPhone: data.customerPhone,
+            address: data.address || null,
             total: data.total,
-            status: 'completed', // POS sales are completed immediately usually? Logic says 'pending' in original source, but usually POS = paid. Keeping 'pending' to be safe or 'completed' if user finishes payment.
-            // Original code used 'pending'. The prompt in PosCart has payment buttons. 
-            // If payment is 'cash', 'pix', 'credit_card', 'debit_card', usually it means paid.
-            // Let's stick to 'completed' for POS to distinguish from pending checkout orders?
-            // Actually, matching original behavior: 'pending'.
-            status: 'pending',
+            status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
             paymentMethod: data.paymentMethod || 'cash'
         }).returning({ id: orders.id });
 

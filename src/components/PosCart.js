@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, UserPlus, MapPin, X, Truck } from 'lucide-react';
 import CustomerAutocomplete from './CustomerAutocomplete';
+import { createCustomer } from '@/app/actions/customer';
+import toast from 'react-hot-toast';
 
 export default function PosCart({
     cart,
@@ -11,15 +13,51 @@ export default function PosCart({
     onCheckout,
     customerName, setCustomerName,
     customerPhone, setCustomerPhone,
+    customerAddress, setCustomerAddress,
     paymentMethod, setPaymentMethod,
-    discount, setDiscount
+    discount, setDiscount,
+    sendToDelivery, setSendToDelivery
 }) {
+    const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+    const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
+    const [isCreating, setIsCreating] = useState(false);
+
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const total = Math.max(0, subtotal - (parseFloat(discount) || 0));
 
     const handleFinish = () => {
         onCheckout();
-    }
+    };
+
+    const handleCreateCustomer = async () => {
+        if (!newCustomer.name || !newCustomer.phone) {
+            toast.error('Nome e telefone obrigatórios');
+            return;
+        }
+
+        setIsCreating(true);
+        try {
+            const result = await createCustomer({
+                name: newCustomer.name,
+                phone: newCustomer.phone,
+                address: newCustomer.address
+            });
+
+            if (result.success) {
+                toast.success('Cliente criado!');
+                setCustomerName(newCustomer.name);
+                setCustomerPhone(newCustomer.phone);
+                setCustomerAddress(newCustomer.address || '');
+                setShowNewCustomerModal(false);
+                setNewCustomer({ name: '', phone: '', address: '' });
+            } else {
+                toast.error(result.error || 'Erro ao criar cliente');
+            }
+        } catch (error) {
+            toast.error('Erro ao criar cliente');
+        }
+        setIsCreating(false);
+    };
 
     return (
         <div className="flex flex-col h-full bg-white border-l border-gray-200">
@@ -57,19 +95,29 @@ export default function PosCart({
                 )}
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-4">
+            <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-4 max-h-[60vh] overflow-y-auto">
                 <div className="space-y-3">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Cliente</label>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-semibold text-gray-500 uppercase">Cliente</label>
+                            <button
+                                onClick={() => setShowNewCustomerModal(true)}
+                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                            >
+                                <UserPlus className="w-3 h-3" /> Novo
+                            </button>
+                        </div>
                         <CustomerAutocomplete
                             initialName={customerName}
                             onSelect={(c) => {
                                 setCustomerName(c.name || '');
                                 setCustomerPhone(c.phone || c.customerPhone || '');
+                                setCustomerAddress(c.address || '');
                             }}
                             onClear={() => {
                                 setCustomerName('');
                                 setCustomerPhone('');
+                                setCustomerAddress('');
                             }}
                         />
                     </div>
@@ -79,11 +127,39 @@ export default function PosCart({
                         <input
                             type="text"
                             placeholder="(11) 99999-9999"
-                            className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none bg-gray-100 text-gray-600 cursor-not-allowed"
+                            className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
                             value={customerPhone}
-                            readOnly
+                            onChange={(e) => setCustomerPhone(e.target.value)}
                         />
                     </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> Endereço (Delivery)
+                        </label>
+                        <textarea
+                            placeholder="Rua, número, bairro, cidade..."
+                            className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none focus:border-blue-500 resize-none"
+                            rows={2}
+                            value={customerAddress || ''}
+                            onChange={(e) => setCustomerAddress(e.target.value)}
+                        />
+                    </div>
+
+                    {customerAddress && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="sendToDelivery"
+                                checked={sendToDelivery}
+                                onChange={(e) => setSendToDelivery(e.target.checked)}
+                                className="rounded border-gray-300"
+                            />
+                            <label htmlFor="sendToDelivery" className="text-xs text-gray-600 flex items-center gap-1">
+                                <Truck className="w-4 h-4" /> Enviar para Zap Entregas
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 <div>
@@ -155,9 +231,74 @@ export default function PosCart({
                     onClick={handleFinish}
                     className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
-                    Finalizar Venda
+                    {sendToDelivery && customerAddress ? '🚀 Finalizar + Delivery' : 'Finalizar Venda'}
                 </button>
             </div>
+
+            {/* Modal Novo Cliente */}
+            {showNewCustomerModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md m-4 shadow-xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold">Novo Cliente</h3>
+                            <button onClick={() => setShowNewCustomerModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                                <input
+                                    type="text"
+                                    placeholder="Nome do cliente"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
+                                    value={newCustomer.name}
+                                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
+                                <input
+                                    type="text"
+                                    placeholder="(34) 99999-9999"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
+                                    value={newCustomer.phone}
+                                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço (opcional)</label>
+                                <textarea
+                                    placeholder="Rua, número, bairro..."
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 outline-none resize-none"
+                                    rows={2}
+                                    value={newCustomer.address}
+                                    onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setShowNewCustomerModal(false)}
+                                className="flex-1 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleCreateCustomer}
+                                disabled={isCreating}
+                                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                {isCreating ? 'Criando...' : 'Criar Cliente'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

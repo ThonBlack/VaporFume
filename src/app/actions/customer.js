@@ -16,7 +16,8 @@ export async function searchCustomers(query) {
             id: customers.id,
             name: customers.name,
             phone: customers.phone,
-            customerPhone: customers.customerPhone
+            customerPhone: customers.customerPhone,
+            address: customers.address
         })
             .from(customers)
             .where(or(
@@ -59,6 +60,38 @@ export async function registerCustomer(phone, password, name) {
     } catch (error) {
         console.error('Register error:', error);
         return { success: false, error: 'Erro ao criar conta.' };
+    }
+}
+
+/**
+ * Login customer
+ */
+/**
+ * Create a new customer (from POS)
+ */
+export async function createCustomer({ name, phone, address }) {
+    if (!name || !phone) {
+        return { success: false, error: 'Nome e telefone obrigatórios' };
+    }
+
+    try {
+        // Check if already exists
+        const existing = await db.select().from(customers).where(eq(customers.phone, phone)).limit(1);
+        if (existing.length > 0) {
+            return { success: false, error: 'Telefone já cadastrado' };
+        }
+
+        await db.insert(customers).values({
+            name,
+            phone,
+            customerPhone: phone,
+            address: address || null
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Create customer error:', error);
+        return { success: false, error: 'Erro ao criar cliente' };
     }
 }
 

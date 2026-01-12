@@ -67,8 +67,10 @@ export default function PosPage({ products }) {
 
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+    const [customerAddress, setCustomerAddress] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [discount, setDiscount] = useState('');
+    const [sendToDelivery, setSendToDelivery] = useState(false);
 
     const [lastOrderId, setLastOrderId] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -82,6 +84,7 @@ export default function PosPage({ products }) {
                 customerName: customerName || 'Venda Balcão',
                 customerEmail: 'pdv@loja.com',
                 customerPhone: customerPhone,
+                address: customerAddress || null,
                 total: finalTotal,
                 paymentMethod: paymentMethod,
                 items: cart.map(item => ({
@@ -92,15 +95,18 @@ export default function PosPage({ products }) {
                     price: item.price
                 })),
                 discount: parseFloat(discount) || 0,
-                isPos: true
+                isPos: true,
+                sendToDelivery: sendToDelivery
             });
 
             // Reset States
             setCart([]);
             setCustomerName('');
             setCustomerPhone('');
+            setCustomerAddress('');
             setPaymentMethod('cash');
             setDiscount('');
+            setSendToDelivery(false);
 
             setLastOrderId(orderId);
             setShowSuccessModal(true);
@@ -165,10 +171,14 @@ export default function PosPage({ products }) {
                     setCustomerName={setCustomerName}
                     customerPhone={customerPhone}
                     setCustomerPhone={setCustomerPhone}
+                    customerAddress={customerAddress}
+                    setCustomerAddress={setCustomerAddress}
                     paymentMethod={paymentMethod}
                     setPaymentMethod={setPaymentMethod}
                     discount={discount}
                     setDiscount={setDiscount}
+                    sendToDelivery={sendToDelivery}
+                    setSendToDelivery={setSendToDelivery}
                 />
             </div>
 
