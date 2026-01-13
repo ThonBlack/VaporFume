@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 // import { useCart } from '@/lib/store'; // Assuming we have a cart store later, for now we will mock
 import { processCheckout } from '@/app/actions/checkout';
 import { calculateShipping } from '@/app/actions/shipping';
-import { Loader2, CreditCard, MessageCircle, ArrowRight, CheckCircle2, Copy, ArrowLeft, Truck } from 'lucide-react';
+import { validateCoupon, useCoupon } from '@/app/actions/coupons';
+import { Loader2, CreditCard, MessageCircle, ArrowRight, CheckCircle2, Copy, ArrowLeft, Truck, Tag, X } from 'lucide-react';
 import Image from 'next/image';
 
 export default function CheckoutPage() {
@@ -36,6 +37,12 @@ export default function CheckoutPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState(null);
 
+    // Coupon State
+    const [couponCode, setCouponCode] = useState('');
+    const [couponLoading, setCouponLoading] = useState(false);
+    const [couponData, setCouponData] = useState(null); // { coupon, discount, discountFormatted }
+    const [couponError, setCouponError] = useState(null);
+
     useEffect(() => {
         const stored = localStorage.getItem('cart');
         if (stored) {
@@ -45,6 +52,36 @@ export default function CheckoutPage() {
     }, []);
 
     const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const couponDiscount = couponData?.discount || 0;
+    const finalTotal = Math.max(0, cartTotal + shippingCost - couponDiscount);
+
+    // Apply Coupon
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return;
+        setCouponLoading(true);
+        setCouponError(null);
+        try {
+            const result = await validateCoupon(couponCode, cartTotal);
+            if (result.valid) {
+                setCouponData(result);
+                setCouponError(null);
+            } else {
+                setCouponError(result.error);
+                setCouponData(null);
+            }
+        } catch (err) {
+            setCouponError('Erro ao validar cupom');
+            setCouponData(null);
+        } finally {
+            setCouponLoading(false);
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        setCouponCode('');
+        setCouponData(null);
+        setCouponError(null);
+    };
 
     // Format CPF
     const handleCpfChange = (e) => {
@@ -164,7 +201,7 @@ export default function CheckoutPage() {
                 customerEmail: formData.email,
                 customerCPF: formData.cpf,
                 items: cart,
-                total: cartTotal + shippingCost,
+                total: finalTotal,
                 paymentMethod: paymentMethod,
                 customerPhone: formData.phone,
                 // Send struct object for Admin Panel
@@ -176,8 +213,16 @@ export default function CheckoutPage() {
                     state: formData.state,
                     cep: formData.postalCode
                 },
-                shippingService: shippingService
+                shippingService: shippingService,
+                couponId: couponData?.coupon?.id || null,
+                couponCode: couponData?.coupon?.code || null,
+                couponDiscount: couponDiscount
             });
+
+            // Increment coupon usage if used
+            if (couponData?.coupon?.id && !res.error) {
+                await useCoupon(couponData.coupon.id);
+            }
 
             console.log('[Client Checkout] Server Action Result:', res);
 
@@ -266,6 +311,47 @@ export default function CheckoutPage() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Coupon Input */}
+                            <div className="py-4 border-t border-gray-50">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Cupom de Desconto</label>
+                                {couponData ? (
+                                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                                        <Tag className="w-4 h-4 text-green-600" />
+                                        <span className="flex-1 text-sm font-medium text-green-800">
+                                            {couponData.coupon.code} - {couponData.discountFormatted} OFF
+                                        </span>
+                                        <button
+                                            onClick={handleRemoveCoupon}
+                                            className="p-1 text-green-600 hover:text-red-500 transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Digite o cupom"
+                                            value={couponCode}
+                                            onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                                            onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                                            className="flex-1 p-2 border border-gray-200 rounded-lg text-sm uppercase focus:ring-2 focus:ring-black outline-none"
+                                        />
+                                        <button
+                                            onClick={handleApplyCoupon}
+                                            disabled={couponLoading || !couponCode.trim()}
+                                            className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aplicar'}
+                                        </button>
+                                    </div>
+                                )}
+                                {couponError && (
+                                    <p className="text-red-500 text-xs mt-2">{couponError}</p>
+                                )}
+                            </div>
+
                             <div className="space-y-2 pt-4 border-t border-gray-50">
                                 <div className="flex justify-between items-center text-sm text-gray-500">
                                     <span>Subtotal</span>
@@ -275,9 +361,15 @@ export default function CheckoutPage() {
                                     <span>Frete</span>
                                     <span>{shippingCost === 0 && shippingService ? 'Grátis' : `R$ ${shippingCost.toFixed(2)}`}</span>
                                 </div>
+                                {couponData && (
+                                    <div className="flex justify-between items-center text-sm text-green-600">
+                                        <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Cupom ({couponData.coupon.code})</span>
+                                        <span>-R$ {couponDiscount.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center text-lg font-bold text-gray-900 pt-2">
                                     <span>Total</span>
-                                    <span>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
+                                    <span>R$ {finalTotal.toFixed(2)}</span>
                                 </div>
                                 {shippingService && (
                                     <div className="text-xs text-gray-500 text-right mt-1 flex items-center justify-end gap-1">
