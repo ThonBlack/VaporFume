@@ -7,7 +7,8 @@ import ExportOrdersButton from '@/components/ExportOrdersButton';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage({ searchParams }) {
-    const page = parseInt(searchParams?.page || '1');
+    const params = await searchParams;
+    const page = parseInt(params?.page || '1');
     const loadLimit = 10;
     const { data: orders, meta } = await getOrders(page, loadLimit);
 
