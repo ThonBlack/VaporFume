@@ -100,13 +100,21 @@ export default async function OrderDetailsPage({ params }) {
                 <div className="pt-6 border-t border-gray-100">
                     <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Endereço</h3>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                        {order.address ? (
-                            <>
-                                {JSON.parse(order.address).street}, {JSON.parse(order.address).number}<br />
-                                {JSON.parse(order.address).neighborhood} - {JSON.parse(order.address).city}<br />
-                                {JSON.parse(order.address).cep}
-                            </>
-                        ) : 'Endereço não informado'}
+                        {order.address ? (() => {
+                            try {
+                                const addr = JSON.parse(order.address);
+                                return (
+                                    <>
+                                        {addr.street}, {addr.number}<br />
+                                        {addr.neighborhood} - {addr.city}<br />
+                                        {addr.cep}
+                                    </>
+                                );
+                            } catch {
+                                // Legacy: address is a plain string
+                                return order.address;
+                            }
+                        })() : 'Endereço não informado'}
                     </p>
                 </div>
 

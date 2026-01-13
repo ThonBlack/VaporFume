@@ -66,7 +66,11 @@ export async function GET(request) {
                 customerName: o.customerName,
                 customerPhone: o.customerPhone,
                 customerEmail: o.customerEmail,
-                address: o.address ? JSON.parse(o.address) : null,
+                address: (() => {
+                    if (!o.address) return null;
+                    try { return JSON.parse(o.address); }
+                    catch { return o.address; }
+                })(),
                 paymentMethod: o.paymentMethod,
                 createdAt: o.createdAt,
                 items: o.items?.map(i => ({
