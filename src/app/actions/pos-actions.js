@@ -1,9 +1,10 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders, orderItems, variants, products } from '@/db/schema';
+import { orders, orderItems, variants, products, customers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { sendToZapEntregas } from './delivery';
 
 export async function submitPosOrder(data) {
     console.log('[POS Action] Submitting Order:', data);
@@ -102,6 +103,35 @@ export async function submitPosOrder(data) {
 
         revalidatePath('/admin/orders');
         revalidatePath('/admin/pos');
+
+        // 3. Enviar para Zap Entregas se checkbox marcado
+        if (data.sendToDelivery && data.address) {
+            console.log('[POS] Enviando para Zap Entregas...');
+            try {
+                // Adiciona observação se pagamento já foi em dinheiro
+                const deliveryResult = await sendToZapEntregas(orderId);
+                if (deliveryResult.success) {
+                    console.log('[POS] Zap Entregas: Sucesso!', deliveryResult.deliveryId);
+                } else {
+                    console.error('[POS] Zap Entregas: Erro -', deliveryResult.error);
+                }
+            } catch (err) {
+                console.error('[POS] Zap Entregas: Exception -', err);
+            }
+        }
+
+        // 4. Atualizar endereço do cliente se informado
+        if (data.customerPhone && data.address) {
+            try {
+                const cleanPhone = data.customerPhone.replace(/\D/g, '');
+                await db.update(customers)
+                    .set({ address: data.address })
+                    .where(eq(customers.phone, cleanPhone));
+                console.log('[POS] Endereço do cliente atualizado');
+            } catch (err) {
+                console.log('[POS] Erro ao atualizar endereço:', err.message);
+            }
+        }
 
         return orderId;
 

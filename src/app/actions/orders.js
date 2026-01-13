@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders, orderItems, variants, products } from '@/db/schema';
+import { orders, orderItems, variants, products, messageQueue, settings } from '@/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -60,9 +60,48 @@ export async function getOrderById(id) {
  * Atualiza o status de um pedido
  */
 export async function updateOrderStatus(id, status) {
+    // Buscar pedido antes de atualizar para pegar dados do cliente
+    const order = await db.query.orders.findFirst({
+        where: eq(orders.id, id)
+    });
+
     await db.update(orders)
         .set({ status })
         .where(eq(orders.id, id));
+
+    // Enviar mensagem WhatsApp quando pedido for despachado/entregue
+    if (status === 'completed' && order?.customerPhone) {
+        try {
+            const cleanPhone = order.customerPhone.replace(/\D/g, '');
+            if (cleanPhone.length >= 10) {
+                // Buscar template de mensagem
+                const msgSetting = await db.select()
+                    .from(settings)
+                    .where(eq(settings.key, 'msg_order_shipped'))
+                    .limit(1);
+
+                let message = msgSetting[0]?.value ||
+                    `Olá ${order.customerName}! 🚀\n\nSeu pedido #${id} da Vapor Fumê foi despachado e está a caminho!\n\nQualquer dúvida é só chamar aqui. Obrigado pela preferência! 💨`;
+
+                // Substituir variáveis
+                message = message
+                    .replace('{nome}', order.customerName || 'Cliente')
+                    .replace('{pedido}', String(id));
+
+                // Agendar mensagem para envio imediato
+                await db.insert(messageQueue).values({
+                    phone: cleanPhone,
+                    content: message,
+                    type: 'order_shipped',
+                    status: 'pending',
+                    scheduledAt: Math.floor(Date.now() / 1000)
+                });
+                console.log(`[Orders] Mensagem de envio agendada para ${cleanPhone}`);
+            }
+        } catch (err) {
+            console.error('[Orders] Erro ao agendar mensagem:', err);
+        }
+    }
 
     revalidatePath('/admin/orders');
     revalidatePath(`/admin/orders/${id}`);
