@@ -27,7 +27,7 @@ export async function getFinancialMetrics(startDate, endDate) {
         .where(and(
             gte(orders.createdAt, start),
             lte(orders.createdAt, end),
-            inArray(orders.status, ['Pago', 'paid', 'completed'])
+            inArray(orders.status, ['Pago', 'paid', 'completed', 'shipped'])
         ));
 
     // 2. Calculate Revenue & Ticket & Count
@@ -50,7 +50,7 @@ export async function getFinancialMetrics(startDate, endDate) {
         .where(and(
             gte(orders.createdAt, start),
             lte(orders.createdAt, end),
-            inArray(orders.status, ['Pago', 'paid', 'completed'])
+            inArray(orders.status, ['Pago', 'paid', 'completed', 'shipped'])
         ));
 
     let totalCost = 0;
