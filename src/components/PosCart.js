@@ -22,6 +22,10 @@ export default function PosCart({
     const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
     const [isCreating, setIsCreating] = useState(false);
 
+    // Estado para modal de confirmação de endereço
+    const [showAddressConfirm, setShowAddressConfirm] = useState(false);
+    const [pendingCustomer, setPendingCustomer] = useState(null);
+
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const total = Math.max(0, subtotal - (parseFloat(discount) || 0));
 
@@ -110,9 +114,16 @@ export default function PosCart({
                         <CustomerAutocomplete
                             initialName={customerName}
                             onSelect={(c) => {
-                                setCustomerName(c.name || '');
-                                setCustomerPhone(c.phone || c.customerPhone || '');
-                                setCustomerAddress(c.address || '');
+                                // Se cliente tem endereço, mostrar modal de confirmação
+                                if (c.address) {
+                                    setPendingCustomer(c);
+                                    setShowAddressConfirm(true);
+                                } else {
+                                    // Cliente sem endereço, preencher normalmente
+                                    setCustomerName(c.name || '');
+                                    setCustomerPhone(c.phone || c.customerPhone || '');
+                                    setCustomerAddress('');
+                                }
                             }}
                             onClear={() => {
                                 setCustomerName('');
@@ -294,6 +305,65 @@ export default function PosCart({
                                 className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
                                 {isCreating ? 'Criando...' : 'Criar Cliente'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Confirmação de Endereço */}
+            {showAddressConfirm && pendingCustomer && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md m-4 shadow-xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold">Confirmar Endereço</h3>
+                            <button onClick={() => {
+                                setShowAddressConfirm(false);
+                                setPendingCustomer(null);
+                            }} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-gray-600 mb-4">
+                            Cliente <span className="font-semibold">{pendingCustomer.name}</span> já possui endereço cadastrado:
+                        </p>
+
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+                            <div className="flex gap-3">
+                                <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-gray-700">{pendingCustomer.address}</p>
+                            </div>
+                        </div>
+
+                        <p className="text-sm text-gray-500 mb-4">Deseja usar este endereço?</p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    // Usar endereço salvo
+                                    setCustomerName(pendingCustomer.name || '');
+                                    setCustomerPhone(pendingCustomer.phone || pendingCustomer.customerPhone || '');
+                                    setCustomerAddress(pendingCustomer.address);
+                                    setShowAddressConfirm(false);
+                                    setPendingCustomer(null);
+                                }}
+                                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                            >
+                                ✓ Usar Este
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // Não usar, limpar endereço
+                                    setCustomerName(pendingCustomer.name || '');
+                                    setCustomerPhone(pendingCustomer.phone || pendingCustomer.customerPhone || '');
+                                    setCustomerAddress('');
+                                    setShowAddressConfirm(false);
+                                    setPendingCustomer(null);
+                                }}
+                                className="flex-1 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Novo Endereço
                             </button>
                         </div>
                     </div>
