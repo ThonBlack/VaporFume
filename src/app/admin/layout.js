@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { LayoutDashboard, Package, ShoppingCart, DollarSign, LogOut, Settings, Monitor, FolderTree, Mail, Menu, X, Smartphone } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import WhatsAppStatusBadge from '@/components/WhatsAppStatusBadge';
+import OrdersNavLink from '@/components/OrdersNavLink';
 
 export default function AdminLayout({ children }) {
     const pathname = usePathname();
@@ -47,7 +48,7 @@ export default function AdminLayout({ children }) {
                     <NavLink href="/admin" icon={<LayoutDashboard size={20} />} label="Visão Geral" active={pathname === '/admin'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/products" icon={<Package size={20} />} label="Produtos" active={pathname === '/admin/products'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/categories" icon={<FolderTree size={20} />} label="Categorias" active={pathname === '/admin/categories'} onClick={() => setIsSidebarOpen(false)} />
-                    <NavLink href="/admin/orders" icon={<ShoppingCart size={20} />} label="Pedidos" active={pathname === '/admin/orders'} onClick={() => setIsSidebarOpen(false)} />
+                    <OrdersNavLink active={pathname === '/admin/orders'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/finance" icon={<DollarSign size={20} />} label="Financeiro" active={pathname === '/admin/finance'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/marketing" icon={<Mail size={20} />} label="Marketing" active={pathname === '/admin/marketing'} onClick={() => setIsSidebarOpen(false)} />
                     <NavLink href="/admin/automations" icon={<Smartphone size={20} />} label="Automações" active={pathname === '/admin/automations'} onClick={() => setIsSidebarOpen(false)} />

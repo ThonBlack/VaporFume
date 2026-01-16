@@ -11,10 +11,10 @@ import { revalidatePath } from 'next/cache';
 export async function getOrders(page = 1, limit = 50) {
     const offset = (page - 1) * limit;
 
-    // Busca todos ordenando pendentes primeiro
+    // Não finalizados primeiro (pending, paid, shipped), depois finalizados/cancelados
     const data = await db.query.orders.findMany({
         orderBy: [
-            sql`CASE WHEN status = 'pending' THEN 0 ELSE 1 END`,
+            sql`CASE WHEN status IN ('completed', 'cancelled') THEN 1 ELSE 0 END`,
             desc(orders.id)
         ],
         limit: limit,
@@ -38,6 +38,16 @@ export async function getOrders(page = 1, limit = 50) {
             totalPages
         }
     };
+}
+
+/**
+ * Conta pedidos não finalizados (para badge de notificação)
+ */
+export async function getPendingOrdersCount() {
+    const result = await db.select({ count: sql`count(*)` })
+        .from(orders)
+        .where(sql`status NOT IN ('completed', 'cancelled')`);
+    return result[0]?.count || 0;
 }
 
 /**
