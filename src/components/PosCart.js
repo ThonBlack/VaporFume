@@ -113,6 +113,7 @@ export default function PosCart({
                         </div>
                         <CustomerAutocomplete
                             initialName={customerName}
+                            onChange={(name) => setCustomerName(name)} // Captura nome digitado
                             onSelect={(c) => {
                                 // Se cliente tem endereço, mostrar modal de confirmação
                                 if (c.address) {

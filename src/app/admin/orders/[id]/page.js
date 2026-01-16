@@ -1,7 +1,7 @@
 import { getOrderById } from '@/app/actions/orders';
 import OrderStatusSelector from '@/components/OrderStatusSelector';
 import Link from 'next/link';
-import { ArrowLeft, MessageCircle, Printer, XCircle, Instagram, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Printer, XCircle, Package, Truck, CheckCircle2, Clock, CreditCard, MapPin, User, Phone } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import FinalizeOrderButton from '@/components/FinalizeOrderButton';
 import SendDeliveryButton from '@/components/SendDeliveryButton';
@@ -16,135 +16,155 @@ export default async function OrderDetailsPage({ params }) {
 
     if (!order) return <div>Pedido não encontrado</div>;
 
+    // Status config com cores e ícones
+    const statusConfig = {
+        pending: { label: 'Aguardando Pagamento', color: 'yellow', icon: Clock },
+        paid: { label: 'Pago', color: 'blue', icon: CreditCard },
+        shipped: { label: 'Enviado', color: 'purple', icon: Truck },
+        completed: { label: 'Entregue', color: 'green', icon: CheckCircle2 },
+        cancelled: { label: 'Cancelado', color: 'red', icon: XCircle }
+    };
+
+    const status = statusConfig[order.status] || statusConfig.pending;
+    const StatusIcon = status.icon;
+
+    // Parse address safely
+    let addressFormatted = 'Endereço não informado';
+    if (order.address) {
+        try {
+            const addr = JSON.parse(order.address);
+            addressFormatted = `${addr.street}, ${addr.number} - ${addr.neighborhood}, ${addr.city}${addr.cep ? ` - ${addr.cep}` : ''}`;
+        } catch {
+            addressFormatted = order.address;
+        }
+    }
+
+    // Payment method display
+    const paymentLabels = {
+        cash: 'Dinheiro',
+        pix: 'Pix',
+        credit_card: 'Cartão de Crédito',
+        fiado: 'Fiado',
+    };
+
     return (
-        <div className="p-6 max-w-2xl mx-auto pb-20">
-            {/* Header with Back Button */}
-            <div className="mb-8 flex items-center">
-                <Link href="/admin/orders" className="p-2 -ml-2 text-gray-400 hover:text-gray-900">
-                    <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <div className="mx-auto font-medium text-gray-900">Detalhes do pedido</div>
-                <div className="w-9"></div> {/* Spacer for centering */}
+        <div className="min-h-screen bg-gray-50 pb-8">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+                    <Link href="/admin/orders" className="p-2 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
+                    <h1 className="font-bold text-gray-900">Pedido #{order.id}</h1>
+                    <div className="w-9"></div>
+                </div>
             </div>
 
-            {/* Main Content */}
-            <div className="space-y-10 bg-white p-2">
-                {/* Order Header Info */}
-                <div className="flex justify-between items-start border-b border-gray-100 pb-6">
-                    <div>
-                        <h1 className="text-lg font-bold text-gray-900">#{order.id.toString().toUpperCase()}</h1>
-                        <p className="text-xs text-gray-400 mt-1">
-                            {new Date(order.createdAt).toLocaleDateString('pt-BR', {
-                                day: 'numeric', month: 'long', year: 'numeric'
-                            })} às {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            <div className="max-w-2xl mx-auto px-4 pt-6 space-y-4">
+                {/* Status Card */}
+                <div className={`bg-${status.color}-50 border border-${status.color}-200 rounded-2xl p-6`}>
+                    <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 bg-${status.color}-100 rounded-xl flex items-center justify-center`}>
+                            <StatusIcon className={`w-7 h-7 text-${status.color}-600`} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm text-gray-500">Status do Pedido</p>
+                            <p className={`text-xl font-bold text-${status.color}-700`}>{status.label}</p>
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-4">
+                        Criado em {new Date(order.createdAt).toLocaleDateString('pt-BR', {
+                            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}
+                    </p>
+                </div>
+
+                {/* Value Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Total do Pedido</span>
+                        <span className="text-3xl font-bold text-gray-900">R$ {order.total.toFixed(2)}</span>
+                    </div>
+                    {order.paymentMethod && (
+                        <p className="text-sm text-gray-400 mt-2">
+                            Pagamento: {paymentLabels[order.paymentMethod] || order.paymentMethod}
                         </p>
-                    </div>
-                    <div className="text-right">
-                        <span className={`inline-block text-xs px-3 py-1 rounded font-medium border ${order.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
-                            order.status === 'paid' ? 'bg-teal-50 text-teal-600 border-teal-100' :
-                                order.status === 'canceled' ? 'bg-red-50 text-red-600 border-red-100' :
-                                    'bg-blue-50 text-blue-600 border-blue-100'
-                            }`}>
-                            {order.status === 'completed' ? 'Concluído / Entregue' :
-                                order.status === 'paid' ? 'Pago (Aguardando Envio)' :
-                                    order.status === 'canceled' ? 'Cancelado' :
-                                        'Pendente / A Combinar'}
-                        </span>
-                    </div>
+                    )}
                 </div>
 
-                {/* Totals */}
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Subtotal</span>
-                    <span className="text-gray-900">R$ {order.total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center font-bold text-base -mt-6">
-                    <span className="text-gray-900">Total</span>
-                    <span className="text-gray-900">R$ {order.total.toFixed(2)}</span>
-                </div>
-
-                {/* Products List */}
-                <div className="pt-6 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Produtos</h3>
+                {/* Products */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Package className="w-5 h-5 text-gray-400" />
+                        Produtos ({order.items.length})
+                    </h3>
                     <div className="space-y-3">
                         {order.items.map(item => (
-                            <div key={item.id} className="flex justify-between text-sm">
-                                <div className="text-blue-500 hover:underline cursor-pointer">
-                                    {item.quantity} x {item.productName} {item.variantName ? `(${item.variantName})` : ''}
+                            <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                                <div>
+                                    <p className="font-medium text-gray-900">{item.productName}</p>
+                                    {item.variantName && (
+                                        <p className="text-sm text-gray-500">{item.variantName}</p>
+                                    )}
                                 </div>
-                                <div className="text-gray-500">
-                                    R$ {(item.price * item.quantity).toFixed(2)}
+                                <div className="text-right">
+                                    <p className="font-medium text-gray-900">R$ {(item.price * item.quantity).toFixed(2)}</p>
+                                    <p className="text-xs text-gray-400">{item.quantity}x R$ {item.price.toFixed(2)}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Customer Data */}
-                <div className="pt-6 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Dados do comprador</h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                        <p className="font-medium text-gray-900">{order.customerName}</p>
-                        <p>{order.customerPhone} <span className="text-blue-500 cursor-pointer">Chamar no whatsapp</span></p>
-                        <p>{order.customerEmail}</p>
+                {/* Customer */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <User className="w-5 h-5 text-gray-400" />
+                        Cliente
+                    </h3>
+                    <div className="space-y-3">
+                        <p className="font-semibold text-gray-900 text-lg">{order.customerName}</p>
+                        {order.customerPhone && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <Phone className="w-4 h-4" />
+                                {order.customerPhone}
+                            </div>
+                        )}
+                        {order.customerEmail && order.customerEmail !== 'pdv@loja.com' && (
+                            <p className="text-sm text-gray-500">{order.customerEmail}</p>
+                        )}
                     </div>
                 </div>
 
-                {/* Delivery Info */}
-                <div className="pt-6 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Como deseja receber o produto?</h3>
-                    <p className="text-sm text-gray-600">Entrega</p>
-                </div>
-
                 {/* Address */}
-                <div className="pt-6 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Endereço</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                        {order.address ? (() => {
-                            try {
-                                const addr = JSON.parse(order.address);
-                                return (
-                                    <>
-                                        {addr.street}, {addr.number}<br />
-                                        {addr.neighborhood} - {addr.city}<br />
-                                        {addr.cep}
-                                    </>
-                                );
-                            } catch {
-                                // Legacy: address is a plain string
-                                return order.address;
-                            }
-                        })() : 'Endereço não informado'}
+                {order.address && (
+                    <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <MapPin className="w-5 h-5 text-gray-400" />
+                            Endereço de Entrega
+                        </h3>
+                        <p className="text-gray-600">{addressFormatted}</p>
+                    </div>
+                )}
+
+                {/* Status Selector */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                    <h3 className="font-bold text-gray-900 mb-2">Alterar Status</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                        O cliente será notificado quando você alterar o status.
                     </p>
-                </div>
-
-                {/* Payment Method */}
-                <div className="pt-6 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Forma de pagamento</h3>
-                    <p className="text-sm text-gray-600">Combinar via Whatsapp</p>
-                </div>
-
-                {/* Status Section */}
-                <div className="pt-6 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase mb-4">Status do pedido</h3>
-                    <p className="text-xs text-gray-500 mb-6">
-                        Informe para seu cliente sobre o andamento do pedido. Seu cliente receberá um e-mail sempre que você alterar o status.
-                    </p>
-
                     <OrderStatusSelector orderId={order.id} currentStatus={order.status} />
                 </div>
 
                 {/* Actions */}
-                <div className="pt-10 space-y-3">
-                    <h3 className="text-xs font-bold text-gray-900 mb-2">Opções</h3>
-
+                <div className="space-y-3 pt-4">
                     <a
-                        href={`https://wa.me/55${order.customerPhone ? order.customerPhone.replace(/\D/g, '') : ''}?text=Olá ${order.customerName}, tudo bem? Sobre o seu pedido #${order.id}...`}
+                        href={`https://wa.me/55${order.customerPhone ? order.customerPhone.replace(/\D/g, '') : ''}?text=Olá ${order.customerName}, tudo bem? Sobre seu pedido #${order.id}...`}
                         target="_blank"
-                        className="flex items-center justify-center gap-2 w-full bg-gray-50 hover:bg-gray-100 text-gray-800 font-medium py-3 rounded-lg transition-colors border border-gray-200"
+                        className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl transition-colors"
                     >
-                        <div className="w-5 h-5 rounded-full border border-gray-800 flex items-center justify-center text-[10px]">W</div>
-                        Chamar no Whatsapp ({order.customerPhone})
+                        <MessageCircle className="w-5 h-5" />
+                        WhatsApp ({order.customerPhone})
                     </a>
 
                     <SendDeliveryButton
@@ -152,30 +172,39 @@ export default async function OrderDetailsPage({ params }) {
                         printUrl={`/admin/orders/${order.id}/print`}
                     />
 
-                    <Link
-                        href={`/admin/orders/${order.id}/print`}
-                        target="_blank"
-                        className="flex items-center justify-center gap-2 w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-lg transition-colors shadow-sm border border-gray-200"
-                    >
-                        <Printer className="w-4 h-4" />
-                        Imprimir Cupom
-                    </Link>
+                    <div className="grid grid-cols-2 gap-3">
+                        <Link
+                            href={`/admin/orders/${order.id}/print`}
+                            target="_blank"
+                            className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl border border-gray-200 transition-colors"
+                        >
+                            <Printer className="w-4 h-4" />
+                            Imprimir
+                        </Link>
 
-                    {/* Finalize Button - Show if NOT completed (allow for 'paid' to complete) */}
-                    {order.status !== 'completed' && (
-                        <FinalizeOrderButton orderId={order.id} />
+                        {order.status !== 'completed' && (
+                            <FinalizeOrderButton orderId={order.id} />
+                        )}
+                    </div>
+
+                    {order.status !== 'cancelled' && (
+                        <button className="flex items-center justify-center gap-2 w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-xl transition-colors border border-red-100">
+                            <XCircle className="w-4 h-4" />
+                            Cancelar Pedido
+                        </button>
                     )}
-
-                    <button className="flex items-center justify-center gap-2 w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-lg transition-colors border border-red-100">
-                        <XCircle className="w-4 h-4" />
-                        Cancelar pedido
-                    </button>
                 </div>
 
-                <div className="pt-10 text-center text-blue-500 flex justify-center gap-2 items-center cursor-pointer text-sm">
-                    <CheckCircle2 className="w-4 h-4" /> Marcar como não lido
+                {/* Track Link */}
+                <div className="text-center pt-4">
+                    <Link
+                        href={`/track/${order.id}`}
+                        target="_blank"
+                        className="text-blue-600 text-sm hover:underline"
+                    >
+                        Ver página de acompanhamento do cliente →
+                    </Link>
                 </div>
-
             </div>
         </div>
     );

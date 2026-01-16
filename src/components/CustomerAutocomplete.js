@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, User, Phone, X } from 'lucide-react';
 import { searchCustomers } from '@/app/actions/customer';
 
-export default function CustomerAutocomplete({ onSelect, onClear, initialName, initialPhone }) {
+export default function CustomerAutocomplete({ onSelect, onClear, onChange, initialName, initialPhone }) {
     const [query, setQuery] = useState(initialName || '');
     const [results, setResults] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -60,6 +60,7 @@ export default function CustomerAutocomplete({ onSelect, onClear, initialName, i
                     value={query}
                     onChange={(e) => {
                         setQuery(e.target.value);
+                        if (onChange) onChange(e.target.value); // Passa nome digitado pro pai
                         if (e.target.value === '') handleClear();
                     }}
                     placeholder="Buscar Cliente (Nome ou Tel)..."
