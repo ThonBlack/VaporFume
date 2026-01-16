@@ -50,20 +50,35 @@ export default async function AdminOrdersPage({ searchParams }) {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'completed' ? 'bg-green-500' :
-                                    order.status === 'pending' ? 'bg-blue-500' : 'bg-gray-300'
-                                    }`}></div>
-                                {order.status === 'completed' || order.status === 'paid' ? (
-                                    <span className="text-xs font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-                                        Pago / Entregue
+                                {/* Status Badge - Cada status com cor distinta */}
+                                {order.status === 'pending' && (
+                                    <span className="text-xs font-medium text-yellow-700 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                                        Aguardando
                                     </span>
-                                ) : order.status === 'cancelled' ? (
-                                    <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                                )}
+                                {order.status === 'paid' && (
+                                    <span className="text-xs font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                        Pago
+                                    </span>
+                                )}
+                                {order.status === 'shipped' && (
+                                    <span className="text-xs font-medium text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                        Enviado
+                                    </span>
+                                )}
+                                {order.status === 'completed' && (
+                                    <span className="text-xs font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                        Entregue
+                                    </span>
+                                )}
+                                {order.status === 'cancelled' && (
+                                    <span className="text-xs font-medium text-red-700 bg-red-50 px-3 py-1 rounded-full border border-red-200 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                                         Cancelado
-                                    </span>
-                                ) : (
-                                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                                        Pendente / Fiado
                                     </span>
                                 )}
                                 <DeleteOrderButton orderId={order.id} />

@@ -59,12 +59,50 @@ export async function getOrderById(id) {
 export async function updateOrderStatus(id, status) {
     // Buscar pedido antes de atualizar para pegar dados do cliente
     const order = await db.query.orders.findFirst({
-        where: eq(orders.id, id)
+        where: eq(orders.id, id),
+        with: { items: true }
     });
 
     await db.update(orders)
         .set({ status })
         .where(eq(orders.id, id));
+
+    // ===== RETORNAR ESTOQUE AO CANCELAR =====
+    if (status === 'cancelled' && order?.items) {
+        console.log(`[Orders] Retornando estoque do pedido #${id}`);
+        for (const item of order.items) {
+            if (!item.productId) continue;
+
+            // Buscar produto para verificar linkedProductId
+            const productRes = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+            const product = productRes[0];
+            if (!product) continue;
+
+            const targetProductId = product.linkedProductId || product.id;
+
+            if (item.variantName) {
+                // Buscar variante pelo nome
+                const allVariants = await db.select().from(variants).where(eq(variants.productId, targetProductId));
+                const variant = allVariants.find(v => v.name.trim().toLowerCase() === item.variantName.trim().toLowerCase());
+
+                if (variant) {
+                    const newStock = variant.stock + item.quantity;
+                    await db.update(variants).set({ stock: newStock }).where(eq(variants.id, variant.id));
+                    console.log(`[Orders] Estoque de "${variant.name}" retornado: ${variant.stock} -> ${newStock}`);
+                }
+            } else {
+                // Variante única/padrão
+                const variant = await db.query.variants.findFirst({
+                    where: (fields, { eq }) => eq(fields.productId, targetProductId)
+                });
+                if (variant) {
+                    const newStock = variant.stock + item.quantity;
+                    await db.update(variants).set({ stock: newStock }).where(eq(variants.id, variant.id));
+                    console.log(`[Orders] Estoque retornado: ${variant.stock} -> ${newStock}`);
+                }
+            }
+        }
+    }
 
     // Enviar mensagem WhatsApp quando pedido for despachado/entregue
     if (status === 'completed' && order?.customerPhone) {

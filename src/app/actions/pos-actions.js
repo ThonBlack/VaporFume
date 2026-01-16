@@ -18,7 +18,8 @@ export async function submitPosOrder(data) {
             address: data.address || null,
             total: data.total,
             status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
-            paymentMethod: data.paymentMethod || 'cash'
+            paymentMethod: data.paymentMethod || 'cash',
+            createdAt: new Date().toISOString() // Data atual no momento da venda
         }).returning({ id: orders.id });
 
         const orderId = orderResult[0].id;
