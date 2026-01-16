@@ -16,13 +16,48 @@ export default async function OrderDetailsPage({ params }) {
 
     if (!order) return <div>Pedido não encontrado</div>;
 
-    // Status config com cores e ícones
+    // Status config com classes completas (Tailwind não suporta classes dinâmicas)
     const statusConfig = {
-        pending: { label: 'Aguardando Pagamento', color: 'yellow', icon: Clock },
-        paid: { label: 'Pago', color: 'blue', icon: CreditCard },
-        shipped: { label: 'Enviado', color: 'purple', icon: Truck },
-        completed: { label: 'Entregue', color: 'green', icon: CheckCircle2 },
-        cancelled: { label: 'Cancelado', color: 'red', icon: XCircle }
+        pending: {
+            label: 'Aguardando Pagamento',
+            icon: Clock,
+            cardBg: 'bg-yellow-50 border-yellow-200',
+            iconBg: 'bg-yellow-100',
+            iconColor: 'text-yellow-600',
+            textColor: 'text-yellow-700'
+        },
+        paid: {
+            label: 'Pago',
+            icon: CreditCard,
+            cardBg: 'bg-blue-50 border-blue-200',
+            iconBg: 'bg-blue-100',
+            iconColor: 'text-blue-600',
+            textColor: 'text-blue-700'
+        },
+        shipped: {
+            label: 'Enviado',
+            icon: Truck,
+            cardBg: 'bg-purple-50 border-purple-200',
+            iconBg: 'bg-purple-100',
+            iconColor: 'text-purple-600',
+            textColor: 'text-purple-700'
+        },
+        completed: {
+            label: 'Entregue',
+            icon: CheckCircle2,
+            cardBg: 'bg-green-50 border-green-200',
+            iconBg: 'bg-green-100',
+            iconColor: 'text-green-600',
+            textColor: 'text-green-700'
+        },
+        cancelled: {
+            label: 'Cancelado',
+            icon: XCircle,
+            cardBg: 'bg-red-50 border-red-200',
+            iconBg: 'bg-red-100',
+            iconColor: 'text-red-600',
+            textColor: 'text-red-700'
+        }
     };
 
     const status = statusConfig[order.status] || statusConfig.pending;
@@ -62,14 +97,14 @@ export default async function OrderDetailsPage({ params }) {
 
             <div className="max-w-2xl mx-auto px-4 pt-6 space-y-4">
                 {/* Status Card */}
-                <div className={`bg-${status.color}-50 border border-${status.color}-200 rounded-2xl p-6`}>
+                <div className={`${status.cardBg} border rounded-2xl p-6`}>
                     <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 bg-${status.color}-100 rounded-xl flex items-center justify-center`}>
-                            <StatusIcon className={`w-7 h-7 text-${status.color}-600`} />
+                        <div className={`w-14 h-14 ${status.iconBg} rounded-xl flex items-center justify-center`}>
+                            <StatusIcon className={`w-7 h-7 ${status.iconColor}`} />
                         </div>
                         <div className="flex-1">
                             <p className="text-sm text-gray-500">Status do Pedido</p>
-                            <p className={`text-xl font-bold text-${status.color}-700`}>{status.label}</p>
+                            <p className={`text-xl font-bold ${status.textColor}`}>{status.label}</p>
                         </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-4">
