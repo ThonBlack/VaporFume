@@ -22,9 +22,11 @@ export default function OrderStatusSelector({ orderId, currentStatus }) {
     };
 
     const steps = [
-        { value: 'paid', label: 'Pedido pago', icon: CheckCircle2 },
-        { value: 'processing', label: 'Em preparação', icon: Package },
-        { value: 'shipped', label: 'Pedido enviado', icon: Truck },
+        { value: 'pending', label: 'Pendente', icon: Package },
+        { value: 'paid', label: 'Pago', icon: CheckCircle2 },
+        { value: 'shipped', label: 'Enviado', icon: Truck },
+        { value: 'completed', label: 'Entregue', icon: Check },
+        { value: 'cancelled', label: 'Cancelado', icon: Package },
     ];
 
     return (
@@ -39,8 +41,8 @@ export default function OrderStatusSelector({ orderId, currentStatus }) {
                         onClick={() => handleStatusChange(step.value)}
                         disabled={isPending}
                         className={`flex flex-col items-center justify-center p-6 rounded-lg border transition-all ${isActive
-                                ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
                             }`}
                     >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'

@@ -14,7 +14,7 @@ export default function CustomerAutocomplete({ onSelect, onClear, onChange, init
     // Debounce search
     useEffect(() => {
         const timer = setTimeout(async () => {
-            if (query.length >= 2 && !initialName) { // Don't search if it's the initial value being set
+            if (query.length >= 2) {
                 setLoading(true);
                 const data = await searchCustomers(query);
                 setResults(data);
@@ -27,7 +27,7 @@ export default function CustomerAutocomplete({ onSelect, onClear, onChange, init
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [query, initialName]);
+    }, [query]);
 
     // Close on click outside
     useEffect(() => {

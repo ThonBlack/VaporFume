@@ -11,8 +11,12 @@ import { revalidatePath } from 'next/cache';
 export async function getOrders(page = 1, limit = 50) {
     const offset = (page - 1) * limit;
 
+    // Busca todos ordenando pendentes primeiro
     const data = await db.query.orders.findMany({
-        orderBy: [desc(orders.id)],
+        orderBy: [
+            sql`CASE WHEN status = 'pending' THEN 0 ELSE 1 END`,
+            desc(orders.id)
+        ],
         limit: limit,
         offset: offset,
         with: {
